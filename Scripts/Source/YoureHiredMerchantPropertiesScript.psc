@@ -1,15 +1,15 @@
 Scriptname YoureHiredMerchantPropertiesScript extends Quest  
 {This is a helper script that holds properties needed by the BusinessManager script to avoid having multiple references to the same static properties}
-
+Actor property PlayerRef auto
 Faction property JobMerchantFaction auto
 Faction property YoureHiredFenceFaction auto
 ObjectReference property BlankChestRef auto
-YoureHiredMerchantManagerScript property YHMerchantManagerScript auto
+MerchantScript property MerchantManager auto
 YoureHiredVanillaManagerScript property YHVanillaManagerScript auto
 
 ObjectReference property MerchantStand auto
+ObjectReference property InvMerchantStand auto
 ObjectReference property CounterLeanIdleRef auto
-ObjectReference[] property StallsCurrent auto
 ObjectReference[] property ActivatorsCurrent auto
 ObjectReference property xmarker auto
 Furniture property StallIdleFurniture auto
@@ -28,6 +28,7 @@ GlobalVariable property aaslrBonusStockGlobal auto
 GlobalVariable property aaslrResetAllActorsChestsFlagGlobal auto
 GlobalVariable property aaslrMaxGoldValueGlobal auto
 GlobalVariable[] property BonusMerchantGoldGlobals auto
+GlobalVariable[] property Merchant_PackageEnable auto
 
 
 FormList property AddedMerchantMessageFormList auto
@@ -72,10 +73,11 @@ int property UpdateNeeded auto
 int property NeedToUpdateMerchantChests auto
 int property ToggleBetweenMenuOrGametimeReset auto
 
+MiscObject property gold auto
+
 int MerchantChestListSize
 int NumMerchants
-
-MiscObject property gold auto
+bool ListeningForModEvent = false
 
 int _extraGoldAmount
 int property ExtraGoldAmount
@@ -92,7 +94,7 @@ int property ExtraGoldAmount
             else
                 BonusMerchantGoldGlobals[index].SetValue(100.0)
             endIf
-        index += 1
+            index += 1
         endWhile
     EndFunction
     int Function Get()
@@ -134,7 +136,7 @@ Event OnInit()
     Logger("In the OnInit", logType = 2)
     MerchantChestListSize = MerchantChestList.GetSize()
     MaxGoldValue = aaslrMaxGoldValueGlobal.GetValue()
-    NumMerchants = aaslrNumberOfMerchants.GetValue() as int
+    NumMerchants = 0
     int numFactions = JobTypesFactionList.GetSize()
     int numVoiceFactions = aaslrYoureHiredVoiceTypeJobFactionsFormList.GetSize()
     ChestTypeText = Utility.CreateStringArray(numFactions)
@@ -147,8 +149,70 @@ Event OnInit()
         EndIf
         VoiceTypeText[numVoiceFactions] = aaslrYoureHiredVoiceTypeJobFactionsFormList.GetAt(numVoiceFactions).GetName()
     endWhile
-    IsManagedMerchantTrading = false
+    ListenForModEvent(true)
 EndEvent
+
+Function AddActivatorToList(ObjectReference thisActivator)
+    int index = ActivatorsCurrent.Find(NONE)
+    if index > -1
+        ActivatorsCurrent[index] = thisActivator
+    else
+        Logger("No empty spaces found when trying to put activator into array.")
+    ;     index = ActivatorsCurrent.Find(thisActivator)
+    ;     If index < 0
+    ;         index = ActivatorsCurrent.Length
+    ;         while index
+    ;             index -= 1
+    ;             if (ActivatorsCurrent[index] as MerchantStallActivationScript).GetOwningMerchant() == (thisActivator as MerchantStallActivationScript).GetOwningMerchant()
+                    
+    ;             endIf
+    ;         endWhile
+            
+    ;     EndIf
+    endIf
+EndFunction
+
+Function RemoveActivatorFromList(ObjectReference thisActivator)
+    int index = ActivatorsCurrent.Find(thisActivator)
+    if index > -1
+        ActivatorsCurrent[index] = none
+    endIf
+EndFunction
+
+Event PlaceMerchantStand(string eventName, string strArg, float numArg, Form sender)
+    Logger("We are in the custom event: " + eventName + ", strArg: " + strArg + ", numArg: " + numArg + ", Sender: " + sender)
+EndEvent
+
+ObjectReference Function GetInventoryStand()
+    return InvMerchantStand.PlaceAtMe(InvMerchantStand.GetBaseObject(), 1, true, false)
+    ; ObjectReference temp = InvMerchantStand
+    ; InvMerchantStand = temp.PlaceAtMe(temp.GetBaseObject(), 1, true, false)
+    ; return temp
+EndFunction
+
+Function SendListeningCommands()
+    int index = ActivatorsCurrent.Length
+    while index
+        index -= 1
+        if ActivatorsCurrent[index]
+            (ActivatorsCurrent[index] as MerchantStallActivationScript).ListenForModEvents()
+        endIf
+    endWhile
+EndFunction
+
+Function ListenForModEvent(bool listen)
+    If (ListeningForModEvent == listen)
+        return
+    EndIf
+    If (ListeningForModEvent)
+        UnregisterForModEvent("aaslrYH_PlaceMerchantStand")
+        ListeningForModEvent = listen
+        return
+    EndIf
+    Logger("We are now listening")
+    RegisterForModEvent("aaslrYH_PlaceMerchantStand", "PlaceMerchantStand")
+    ListeningForModEvent = listen
+EndFunction
 
 Function Logger(string textToLog = "", bool logFlag = true, int logType = 1)
     if logType == 1

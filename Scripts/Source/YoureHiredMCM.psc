@@ -1,6 +1,6 @@
 Scriptname YoureHiredMCM extends SKI_ConfigBase
 
-YoureHiredMerchantPropertiesScript property FixedMerchantProperties auto
+YoureHiredMerchantPropertiesScript property FixedProperties auto
 ; Merchant Manager properties
 string property MM_NuberOfMerchantsText auto
 string property MM_SelectedMerchantName auto
@@ -8,8 +8,8 @@ string property MM_SelectedJobType auto
 string property MM_ClickHereText auto
 string[] property MM_MerchantNames auto
 string[] property MM_JobTypes auto
-YoureHiredBusinessManagerScript property MM_ThisMerchant auto
-YoureHiredBusinessManagerScript[] property MM_MerchantsList auto
+BusinessScript property MM_ThisMerchant auto
+BusinessScript[] property MM_MerchantsList auto
 bool property MM_OptionsEnabled auto
 bool property MM_OverStockedEnabled auto
 bool property MM_FenceFlag auto
@@ -70,13 +70,13 @@ Event OnConfigInit()
     S_RecruitmentEnabled = false
     S_RepeatEnabled = false
     S_ResetVanillaEnabled = false
-    S_EnableHotKeyUse = FixedMerchantProperties.EnableHotKeyUse
-    S_RequireTwoKeys = FixedMerchantProperties.RequireTwoKeys
+    S_EnableHotKeyUse = FixedProperties.EnableHotKeyUse
+    S_RequireTwoKeys = FixedProperties.RequireTwoKeys
     S_MaxGoldInChest = 6800.0
     S_MinGOldAmount = 1800
-    S_NumDaysBetweenReset = FixedMerchantProperties.DaysBeforeReset
-    S_ResetOnMenuClose = FixedMerchantProperties.ResetOnMenuClose
-    S_LowCountReset = FixedMerchantProperties.LowCountReset
+    S_NumDaysBetweenReset = FixedProperties.DaysBeforeReset
+    S_ResetOnMenuClose = FixedProperties.ResetOnMenuClose
+    S_LowCountReset = FixedProperties.LowCountReset
     If (Game.UsingGamepad())
         S_Hotkey = 281 ; R-Trigger
         S_SecondaryHotkey = 280 ; L-Trigger
@@ -84,10 +84,10 @@ Event OnConfigInit()
         S_Hotkey = 38 ; L
         S_SecondaryHotkey = 157 ; R crtl
     EndIf
-    FixedMerchantProperties.Hotkey = S_Hotkey
-    FixedMerchantProperties.SecondaryHotkey = S_SecondaryHotkey
-    MM_ExtraStartingGold = FixedMerchantProperties.ExtraGoldAmount
-    MM_OverStockedEnabled = FixedMerchantProperties.OverStockedcMerchant
+    FixedProperties.Hotkey = S_Hotkey
+    FixedProperties.SecondaryHotkey = S_SecondaryHotkey
+    MM_ExtraStartingGold = FixedProperties.ExtraGoldAmount
+    MM_OverStockedEnabled = FixedProperties.OverStockedcMerchant
     MM_FenceFlag = false
     MM_OptionsEnabled = false
     MM_SelectedMerchantName = "Select A Merchant"
@@ -116,12 +116,12 @@ Event OnPageReset(string page)
         YoureHiredMCM_SettingsPage.RenderPage(self, page)
     elseif page == YoureHiredMCM_MerchantManagementPage.GetPageName()
         if !MM_MerchantsList
-            MM_MerchantsList = FixedMerchantProperties.YHMerchantManagerScript.GetMerchantAliasScripts()
+            MM_MerchantsList = FixedProperties.MerchantManager.GetMerchantAliasScripts()
         endIf
         If !MM_JobTypes
-            MM_JobTypes = FixedMerchantProperties.ChestTypeText
+            MM_JobTypes = FixedProperties.ChestTypeText
         EndIf
-        MM_MerchantNames = FixedMerchantProperties.YHMerchantManagerScript.GetMerchantNames()
+        MM_MerchantNames = FixedProperties.MerchantManager.GetMerchantNames()
         YoureHiredMCM_MerchantManagementPage.RenderPage(self, page)
     elseif page == YoureHiredMCM_StoreManagerPage.GetPageName()
         YoureHiredMCM_StoreManagerPage.RenderPage(self, page)

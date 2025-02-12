@@ -16,4 +16,4 @@ EndFunction
 
 
 
-YoureHiredMerchantManagerScript property YoureHiredMMScript auto
+MerchantScript property YoureHiredMMScript auto

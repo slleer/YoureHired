@@ -18,15 +18,15 @@ EndFunction
 
 Function LEFT(YoureHiredMCM mcm) global
     mcm.AddHeaderOption("Managed Merchants")
-    mcm.oid_MerchantManager_NumberOfMerchantsText = mcm.AddTextOption("Merchant count", mcm.FixedMerchantProperties.GetNumMerchantsGlobal())
+    mcm.oid_MerchantManager_NumberOfMerchantsText = mcm.AddTextOption("Merchant count", mcm.FixedProperties.GetNumMerchantsGlobal())
     mcm.oid_MerchantManager_OverStockedMerchants = mcm.AddToggleOption("Overstocked Merchant Inventory", mcm.MM_OverStockedEnabled)
     mcm.oid_MerchantManager_ExtraStartingGold = mcm.AddSliderOption("Increase Mechant Gold", mcm.MM_ExtraStartingGold, "By {0}")
     mcm.AddEmptyOption()
     int flag = mcm.OPTION_FLAG_NONE
-    if mcm.FixedMerchantProperties.GetNumMerchantsGlobal() == 0
+    if mcm.FixedProperties.GetNumMerchantsGlobal() == 0
         flag = mcm.OPTION_FLAG_DISABLED
     endIf
-    mcm.oid_MerchantManager_ClearAllMerchants = mcm.AddTextOption("Remove All Merchants", mcm.MM_ClickHereText, flag)
+    mcm.oid_MerchantManager_ClearAllMerchants = mcm.AddTextOption("Dismiss All Merchants", mcm.MM_ClickHereText, flag)
 EndFunction
 
 Function RIGHT(YoureHiredMCM mcm) global
@@ -40,7 +40,7 @@ Function RIGHT(YoureHiredMCM mcm) global
     endIf
     mcm.oid_MerchantManager_FenceToggle = mcm.AddToggleOption("Make Fence", mcm.MM_FenceFlag, flag)
     mcm.oid_MerchantManager_JobTypesList = mcm.AddMenuOption("Merchant Type: ", mcm.MM_SelectedJobType, flag)
-    mcm.oid_MerchantManager_ClearMerchant = mcm.AddTextOption("Remove Selected Merchant", mcm.MM_ClickHereText, flag)
+    mcm.oid_MerchantManager_ClearMerchant = mcm.AddTextOption("Dismiss Selected Merchant", mcm.MM_ClickHereText, flag)
 EndFunction
 
 
@@ -50,30 +50,30 @@ Function OnSelect(YoureHiredMCM mcm, int optionId) global
         mcm.MM_ThisMerchant.PromoteToFence()
         mcm.SetToggleOptionValue(mcm.oid_MerchantManager_FenceToggle, mcm.MM_FenceFlag)
     ElseIf (optionId == mcm.oid_MerchantManager_ClearMerchant)
-        string msg = "Are you sure you want to remove selected merchant?"
+        string msg = "Are you sure you want to dismiss selected merchant?"
         bool continue = mcm.ShowMessage(msg, true, "$Yes", "$No")
         If (continue)
-            mcm.FixedMerchantProperties.YHMerchantManagerScript.RemoveThisMerchant(mcm.MM_ThisMerchant)
-            mcm.SetTextOptionValue(mcm.oid_MerchantManager_NumberOfMerchantsText, mcm.FixedMerchantProperties.GetNumMerchantsGlobal(), true)
+            mcm.FixedProperties.MerchantManager.RemoveThisMerchant(mcm.MM_ThisMerchant)
+            mcm.SetTextOptionValue(mcm.oid_MerchantManager_NumberOfMerchantsText, mcm.FixedProperties.GetNumMerchantsGlobal(), true)
             OnDefault(mcm, mcm.oid_MerchantManager_MerchantsList)
         EndIf
     ElseIf (optionId == mcm.oid_MerchantManager_ClearAllMerchants)
-        string msg = "Are you sure you want to remove all merchants?"
+        string msg = "Are you sure you want to dismiss all merchants?"
         bool continue = mcm.ShowMessage(msg, true, "$Yes", "$No")
         If (continue)
-            mcm.FixedMerchantProperties.YHMerchantManagerScript.RemoveAllMerchants()
-            mcm.SetTextOptionValue(mcm.oid_MerchantManager_NumberOfMerchantsText, mcm.FixedMerchantProperties.GetNumMerchantsGlobal(), true)
+            mcm.FixedProperties.MerchantManager.RemoveAllMerchants()
+            mcm.SetTextOptionValue(mcm.oid_MerchantManager_NumberOfMerchantsText, mcm.FixedProperties.GetNumMerchantsGlobal(), true)
             mcm.SetOptionFlags(mcm.oid_MerchantManager_ClearAllMerchants, mcm.OPTION_FLAG_DISABLED, true)
             OnDefault(mcm, mcm.oid_MerchantManager_MerchantsList)
         EndIf
     ElseIf (optionId == mcm.oid_MerchantManager_OverStockedMerchants)
         mcm.MM_OverStockedEnabled = !mcm.MM_OverStockedEnabled
         mcm.SetToggleOptionValue(optionId, mcm.MM_OverStockedEnabled)
-        mcm.FixedMerchantProperties.OverStockedcMerchant = mcm.MM_OverStockedEnabled
-        mcm.FixedMerchantProperties.SetNeedToUpdateMerchantChests()
-        mcm.FixedMerchantProperties.SetUpdateNeeded()
-        ; int numMerchants = mcm.FixedMerchantProperties.GetNumMerchantsGlobal()
-        ; YoureHiredBusinessManagerScript thisMerchant
+        mcm.FixedProperties.OverStockedcMerchant = mcm.MM_OverStockedEnabled
+        mcm.FixedProperties.SetNeedToUpdateMerchantChests()
+        mcm.FixedProperties.SetUpdateNeeded()
+        ; int numMerchants = mcm.FixedProperties.GetNumMerchantsGlobal()
+        ; BusinessScript thisMerchant
         ; while numMerchants
         ;     numMerchants -= 1
         ;     thisMerchant = mcm.MM_MerchantsList[numMerchants]
@@ -101,7 +101,7 @@ EndFunction
 
 Function OnMenuAccept(YoureHiredMCM mcm, int optionId, int index) global
     If (optionId == mcm.oid_MerchantManager_MerchantsList)
-        If (mcm.FixedMerchantProperties.AtLeastOneMerchant)
+        If (mcm.FixedProperties.AtLeastOneMerchant)
             mcm.MM_ThisMerchant = GetMerchant(mcm, mcm.MM_MerchantNames[index])
             If mcm.MM_ThisMerchant
                 mcm.SetMenuOptionValue(optionId, mcm.MM_ThisMerchant.GetActorName())
@@ -130,9 +130,9 @@ Function OnHighlight(YoureHiredMCM mcm, int optionId) global
     ElseIf (optionId == mcm.oid_MerchantManager_JobTypesList)
         mcm.SetInfoText("Choose this merchant's type.")
     ElseIf (OptionId == mcm.oid_MerchantManager_ClearMerchant)
-        mcm.SetInfoText("The selected merchant will be removed from mod control and will no longer be a managed merchant.")
+        mcm.SetInfoText("The selected merchant will be dismissed from mod control and will no longer be a managed merchant.")
     ElseIf (optionId == mcm.oid_MerchantManager_ClearAllMerchants)
-        mcm.SetInfoText("Removes all merchants from mod control, emptying all managed merchant positions.")
+        mcm.SetInfoText("Dismisses all merchants from mod control, emptying all managed merchant positions.")
     ElseIf (optionId == mcm.oid_MerchantManager_OverStockedMerchants)
         mcm.SetInfoText("Adds a number of items to each managed merchant type [Default off]")
     ElseIf (optionId == mcm.oid_MerchantManager_ExtraStartingGold)
@@ -160,18 +160,18 @@ Function OnDefault(YoureHiredMCM mcm, int optionId) global
         mcm.SetMenuOptionValue(mcm.oid_MerchantManager_JobTypesList, mcm.MM_SelectedJobType)
     ElseIF (optionId == mcm.oid_MerchantManager_OverStockedMerchants)
         mcm.MM_OverStockedEnabled = false
-        mcm.FixedMerchantProperties.OverStockedcMerchant = false
+        mcm.FixedProperties.OverStockedcMerchant = false
         mcm.SetToggleOptionValue(optionId, mcm.MM_OverStockedEnabled)
-        mcm.FixedMerchantProperties.SetNeedToUpdateMerchantChests()
-        mcm.FixedMerchantProperties.SetUpdateNeeded()
+        mcm.FixedProperties.SetNeedToUpdateMerchantChests()
+        mcm.FixedProperties.SetUpdateNeeded()
     ElseIf (optionId == mcm.oid_MerchantManager_ExtraStartingGold)
         mcm.MM_ExtraStartingGold = 0
-        mcm.FixedMerchantProperties.ExtraGoldAmount = 0
+        mcm.FixedProperties.ExtraGoldAmount = 0
         mcm.SetSliderOptionValue(optionId, mcm.MM_ExtraStartingGold, "By {0}")
-        mcm.FixedMerchantProperties.SetNeedToUpdateMerchantChests()
-        mcm.FixedMerchantProperties.SetUpdateNeeded()
-        ; int numMerchants = mcm.FixedMerchantProperties.GetNumMerchantsGlobal()
-        ; YoureHiredBusinessManagerScript thisMerchant
+        mcm.FixedProperties.SetNeedToUpdateMerchantChests()
+        mcm.FixedProperties.SetUpdateNeeded()
+        ; int numMerchants = mcm.FixedProperties.GetNumMerchantsGlobal()
+        ; BusinessScript thisMerchant
         ; while numMerchants
         ;     numMerchants -= 1
         ;     thisMerchant = mcm.MM_MerchantsList[numMerchants]
@@ -197,14 +197,14 @@ Function OnSliderAccept(YoureHiredMCM mcm, int optionId, float value) global
         Logger("we have the right option id")
         mcm.MM_ExtraStartingGold = (value as int)
         Logger("we just set the extrastartinggold mcm property")
-        mcm.FixedMerchantProperties.ExtraGoldAmount = (value as int)
-        Logger("Just set the extra gold proeprty from fixedMerchantProperties")
+        mcm.FixedProperties.ExtraGoldAmount = (value as int)
+        Logger("Just set the extra gold proeprty from FixedProperties")
         mcm.SetSliderOptionValue(optionId, value, "By {0}")
         Logger(" just set the option value")
-        mcm.FixedMerchantProperties.SetNeedToUpdateMerchantChests()
-        mcm.FixedMerchantProperties.SetUpdateNeeded()
-        ; int numMerchants = mcm.FixedMerchantProperties.GetNumMerchantsGlobal()
-        ; YoureHiredBusinessManagerScript thisMerchant
+        mcm.FixedProperties.SetNeedToUpdateMerchantChests()
+        mcm.FixedProperties.SetUpdateNeeded()
+        ; int numMerchants = mcm.FixedProperties.GetNumMerchantsGlobal()
+        ; BusinessScript thisMerchant
         ; while numMerchants
         ;     numMerchants -= 1
         ;     thisMerchant = mcm.MM_MerchantsList[numMerchants]
@@ -217,7 +217,7 @@ EndFunction
 
 int Function GetIndexOfMerchant(YoureHiredMCM mcm, string merchantName) global
     int index = 0
-    YoureHiredBusinessManagerScript foundMerchant
+    BusinessScript foundMerchant
     While (index < mcm.MM_MerchantsList.Length)
         foundMerchant = mcm.MM_MerchantsList[index]
         If (foundMerchant.GetActorReference() && foundMerchant.GetActorName() == merchantName)
@@ -228,9 +228,9 @@ int Function GetIndexOfMerchant(YoureHiredMCM mcm, string merchantName) global
     return -1
 EndFunction
 
-YoureHiredBusinessManagerScript Function GetMerchant(YoureHiredMCM mcm, string merchantName) global
+BusinessScript Function GetMerchant(YoureHiredMCM mcm, string merchantName) global
     int index = 0
-    YoureHiredBusinessManagerScript foundMerchant
+    BusinessScript foundMerchant
     While (index < mcm.MM_MerchantsList.Length)
         foundMerchant = mcm.MM_MerchantsList[index]
         If (foundMerchant.GetActorReference() && foundMerchant.GetActorName() == merchantName)

@@ -1,34 +1,55 @@
 Scriptname YoureHiredVanillaManagerScript extends Quest  
 {Used for any/all vanilla merchants that aren't currently You're Hired merchants}
 
-YoureHiredMerchantPropertiesScript property FixedMerchantProperties auto
+YoureHiredMerchantPropertiesScript property FixedProperties auto
 int property ResetHotKey auto
 int property ResetSecondaryHotKey auto
 bool property RequireSecondaryHotKey auto
-Actor property CurrentMerchant auto
+
+
+Actor CurrentMerchant
+bool weAreListening
 bool isSecondaryKeyDown
+bool isPrimaryKeyDown
 bool vanillaResetFlag = false
 int MAXGOLDAMOUNT = 25000
+Faction[] vanillaFactions
+
+Event OnInit()
+    RegisterForModEvent("aaslrYH_UpdateResetCriteria", "OnResetUpdateCriteria")
+EndEvent
+
+Function ListenForModEvents()
+    RegisterForModEvent("aaslrYH_UpdateResetCriteria", "OnResetUpdateCriteria")
+EndFunction
+
+Event OnResetUpdateCriteria()
+    if weAreListening
+        StopListenting()
+    else
+        ListenForMenuAndHotKeys()
+    endIf
+    weAreListening = !weAreListening
+EndEvent
 
 Event OnMenuOpen(string openMenu)
     if openMenu == "BarterMenu"
-        If (!FixedMerchantProperties.IsManagedMerchantTrading)
-            If FixedMerchantProperties.EnableHotKeyUse
+        If (!FixedProperties.IsManagedMerchantTrading)
+            If FixedProperties.EnableHotKeyUse
                 CurrentMerchant = Game.GetCurrentCrosshairRef() as Actor
-                If !FixedMerchantProperties.YHMerchantManagerScript.Merchants.HasForm(CurrentMerchant)
+                If !FixedProperties.MerchantManager.IsManagedMerchant(CurrentMerchant)
                     vanillaResetFlag = true
-                    ResetHotKey = FixedMerchantProperties.Hotkey
+                    vanillaFactions = CurrentMerchant.GetFactions(-120,120)
+                    ResetHotKey = FixedProperties.Hotkey
                     Logger("Registering for Hotkeys: " + ResetHotKey)
                     RegisterForKey(ResetHotKey)
-                    RequireSecondaryHotKey = FixedMerchantProperties.RequireTwoKeys
-                    Logger("RequiresSecondaryKey: " + RequireSecondaryHotKey)
-                    If (RequireSecondaryHotKey)
+                    If (FixedProperties.RequireTwoKeys)
                         Logger("Registering for secondaryHotKey")
-                        ResetSecondaryHotKey = FixedMerchantProperties.SecondaryHotkey
+                        ResetSecondaryHotKey = FixedProperties.SecondaryHotkey
                         RegisterForKey(ResetSecondaryHotKey)
                     EndIf
                 EndIf
-                ; If FixedMerchantProperties.ResetVanillaMerchant
+                ; If FixedProperties.ResetVanillaMerchant
                 ; EndIf
             EndIf    
         EndIf
@@ -41,6 +62,11 @@ Event OnKeyDown(int keyCode)
         Logger("The barter menu is open")
         If (Game.UsingGamepad())
             If (keyCode == ResetSecondaryHotKey)
+                If (isPrimaryKeyDown)
+                    Logger("About to reset!")
+                    ResetChest(CurrentMerchant)
+                    return
+                EndIf
                 isSecondaryKeyDown = true
             EndIf
         EndIf
@@ -68,14 +94,20 @@ Event OnKeyUP(int keycode, float holdTime)
         If (keyCode == ResetSecondaryHotKey)
             isSecondaryKeyDown = false
         EndIf
+        If (keycode == ResetHotKey)
+            isPrimaryKeyDown = false
+        EndIf
     EndIf
 EndEvent
 
 Event OnMenuClose(string openMenu)
     if openMenu == "BarterMenu"
         Logger("UnRegistering")
-        FixedMerchantProperties.IsManagedMerchantTrading = false
+        FixedProperties.IsManagedMerchantTrading = false
         vanillaResetFlag = false
+        If (FixedProperties.ResetOnMenuClose && FixedProperties.aaslrResetVanillaFlagGlobal.GetValue() > 0)
+            ResetChest(CurrentMerchant)
+        EndIf
         CurrentMerchant = NONE
         UnregisterForAllKeys()
         ; UnregisterForMenu(openMenu)
@@ -92,7 +124,6 @@ Function StopListenting()
 EndFunction
 
 Function ResetChest(Actor akMerchant)
-    Faction[] vanillaFactions = akMerchant.GetFactions(-120,120)
     int numFactions = vanillaFactions.Length
     YHUtil.AddLineBreakWithText(" Attempting to reset merchant: " + akMerchant.GetBaseObject().GetName())
     Faction thisFaction
@@ -102,26 +133,25 @@ Function ResetChest(Actor akMerchant)
         thisFaction = vanillaFactions[numFactions]
         If (thisFaction.GetMerchantContainer())
             Logger("Merchant chest is not null, resting...")
-            int goldInChest = thisFaction.GetMerchantContainer().GetItemCount(FixedMerchantProperties.gold)
+            int goldInChest = thisFaction.GetMerchantContainer().GetItemCount(FixedProperties.gold)
             thisFaction.GetMerchantContainer().Reset()
             If (vanillaResetFlag)
                 UI.InvokeFloat("BarterMenu", "_root.Menu_mc.doTransaction", 0.0)
-                thisFaction.GetMerchantContainer().addItem(FixedMerchantProperties.gold, 1, true)
             EndIf
             If (goldInChest <= MAXGOLDAMOUNT)
-                Logger("Chest had less than max. goldInChest: " + goldInChest + ", merchnat has: " + akMerchant.GetItemCount(FixedMerchantProperties.gold) + " gold!")
-                int currentGold = thisFaction.GetMerchantContainer().GetItemCount(FixedMerchantProperties.gold)
+                Logger("Chest had less than max. goldInChest: " + goldInChest + ", merchnat has: " + akMerchant.GetItemCount(FixedProperties.gold) + " gold!")
+                int currentGold = thisFaction.GetMerchantContainer().GetItemCount(FixedProperties.gold)
                 If (goldInChest > currentGold)
                     goldInChest -= currentGold
-                    thisFaction.GetMerchantContainer().AddItem(FixedMerchantProperties.gold, goldInChest, true)
+                    thisFaction.GetMerchantContainer().AddItem(FixedProperties.gold, goldInChest, true)
                 EndIf
-                Logger("After reset. actual gold in chest: " + thisFaction.GetMerchantContainer().GetItemCount(FixedMerchantProperties.gold) + ", merchnat has: " + akMerchant.GetItemCount(FixedMerchantProperties.gold) + " gold!")
+                Logger("After reset. actual gold in chest: " + thisFaction.GetMerchantContainer().GetItemCount(FixedProperties.gold) + ", merchnat has: " + akMerchant.GetItemCount(FixedProperties.gold) + " gold!")
             Else
-                Logger("Chest had more than max. goldInChest: " + goldInChest + ", merchnat has: " + akMerchant.GetItemCount(FixedMerchantProperties.gold) + " gold!")
+                Logger("Chest had more than max. goldInChest: " + goldInChest + ", merchnat has: " + akMerchant.GetItemCount(FixedProperties.gold) + " gold!")
                 goldInChest = MAXGOLDAMOUNT
-                goldInChest -= thisFaction.GetMerchantContainer().GetItemCount(FixedMerchantProperties.gold)
-                thisFaction.GetMerchantContainer().AddItem(FixedMerchantProperties.gold, goldInChest, true)
-                Logger("After reset. actual gold in chest: " + thisFaction.GetMerchantContainer().GetItemCount(FixedMerchantProperties.gold) + ", merchnat has: " + akMerchant.GetItemCount(FixedMerchantProperties.gold) + " gold!")
+                goldInChest -= thisFaction.GetMerchantContainer().GetItemCount(FixedProperties.gold)
+                thisFaction.GetMerchantContainer().AddItem(FixedProperties.gold, goldInChest, true)
+                Logger("After reset. actual gold in chest: " + thisFaction.GetMerchantContainer().GetItemCount(FixedProperties.gold) + ", merchnat has: " + akMerchant.GetItemCount(FixedProperties.gold) + " gold!")
             EndIf
         EndIf
     endWhile

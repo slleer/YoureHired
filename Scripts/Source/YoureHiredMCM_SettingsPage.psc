@@ -62,18 +62,18 @@ EndFunction
 Function OnSelect(YoureHiredMCM mcm, int optionId) global
     If (optionId == mcm.oid_Settings_FenceEnabled)
         If (!mcm.S_fenceEnabled)
-            mcm.FixedMerchantProperties.aaslrFenceWantedFlag.SetValue(1.0)
+            mcm.FixedProperties.aaslrFenceWantedFlag.SetValue(1.0)
         Else
-            mcm.FixedMerchantProperties.aaslrFenceWantedFlag.SetValue(0.0)
+            mcm.FixedProperties.aaslrFenceWantedFlag.SetValue(0.0)
         EndIf
         mcm.S_fenceEnabled = !mcm.S_fenceEnabled
         mcm.SetToggleOptionValue(mcm.oid_Settings_FenceEnabled, mcm.S_fenceEnabled)
-        Logger("Fence Enabled: " + mcm.FixedMerchantProperties.aaslrFenceWantedFlag.GetValue())
+        Logger("Fence Enabled: " + mcm.FixedProperties.aaslrFenceWantedFlag.GetValue())
     ElseIf (optionId == mcm.oid_Settings_ResetOnMenuClose)
         mcm.S_ResetOnMenuClose = !mcm.S_ResetOnMenuClose
-        mcm.FixedMerchantProperties.ResetOnMenuClose = mcm.S_ResetOnMenuClose
-        mcm.FixedMerchantProperties.SetToggleBetweenMenuOrGametimeReset()
-        mcm.FixedMerchantProperties.SetUpdateNeeded()
+        mcm.FixedProperties.ResetOnMenuClose = mcm.S_ResetOnMenuClose
+        mcm.FixedProperties.SetToggleBetweenMenuOrGametimeReset()
+        mcm.FixedProperties.SetUpdateNeeded()
         int flag
         If (mcm.S_ResetOnMenuClose)
             flag = mcm.OPTION_FLAG_DISABLED
@@ -84,61 +84,61 @@ Function OnSelect(YoureHiredMCM mcm, int optionId) global
         mcm.SetOptionFlags(mcm.oid_Settings_DaysBetweenReset, flag)
     ElseIf (optionId == mcm.oid_Settings_RecruitmentEnabled)
         If (!mcm.S_RecruitmentEnabled)
-            mcm.FixedMerchantProperties.aaslrNowHiringFlagGlobal.SetValue(1.0)
-            mcm.FixedMerchantProperties.aaslrNowHiringFlagGlobal.SetValue(0.0)
+            mcm.FixedProperties.aaslrNowHiringFlagGlobal.SetValue(1.0)
+            mcm.FixedProperties.aaslrNowHiringFlagGlobal.SetValue(0.0)
         EndIf
         mcm.S_RecruitmentEnabled = !mcm.S_RecruitmentEnabled
         mcm.SetToggleOptionValue(mcm.oid_Settings_RecruitmentEnabled, mcm.S_RecruitmentEnabled)
-        Logger("Now Hiring!: " + mcm.FixedMerchantProperties.aaslrNowHiringFlagGlobal.GetValue())
+        Logger("Now Hiring!: " + mcm.FixedProperties.aaslrNowHiringFlagGlobal.GetValue())
     ElseIf (optionId == mcm.oid_Settings_RepeatEnabled)
         If (!mcm.S_RepeatEnabled)
-            mcm.FixedMerchantProperties.aaslrRepeatCustomerFlagGlobal.SetValueInt(1)
+            mcm.FixedProperties.aaslrRepeatCustomerFlagGlobal.SetValueInt(1)
         Else
-            mcm.FixedMerchantProperties.aaslrNowHiringFlagGlobal.SetValueInt(0)
+            mcm.FixedProperties.aaslrNowHiringFlagGlobal.SetValueInt(0)
         EndIf
         mcm.S_RepeatEnabled = !mcm.S_RepeatEnabled
         mcm.SetToggleOptionValue(mcm.oid_Settings_RepeatEnabled, mcm.S_RepeatEnabled)
-        Logger("Repeat Customer: " + mcm.FixedMerchantProperties.aaslrNowHiringFlagGlobal.GetValueInt())
+        Logger("Repeat Customer: " + mcm.FixedProperties.aaslrNowHiringFlagGlobal.GetValueInt())
     ElseIf (optionId == mcm.oid_Settings_ResetVanillaEnabled)
         If (!mcm.S_ResetVanillaEnabled)
-            mcm.FixedMerchantProperties.aaslrResetVanillaFlagGlobal.SetValue(1.0)
+            mcm.FixedProperties.aaslrResetVanillaFlagGlobal.SetValue(1.0)
         Else
-            mcm.FixedMerchantProperties.aaslrResetVanillaFlagGlobal.SetValue(0.0)
+            mcm.FixedProperties.aaslrResetVanillaFlagGlobal.SetValue(0.0)
         EndIf
         mcm.S_ResetVanillaEnabled = !mcm.S_ResetVanillaEnabled
         mcm.SetToggleOptionValue(mcm.oid_Settings_ResetVanillaEnabled, mcm.S_ResetVanillaEnabled)
-        Logger("Reset Vanilla: " + mcm.FixedMerchantProperties.aaslrResetVanillaFlagGlobal.GetValue())
+        Logger("Reset Vanilla: " + mcm.FixedProperties.aaslrResetVanillaFlagGlobal.GetValue())
     ElseIf (optionId == mcm.oid_SettingS_AllowChildren)
         If (mcm.S_AllowChildren)
-            mcm.FixedMerchantProperties.aaslrAllowChildrenFlag.SetValue(2.0)
+            mcm.FixedProperties.aaslrAllowChildrenFlag.SetValue(2.0)
         Else
-            mcm.FixedMerchantProperties.aaslrAllowChildrenFlag.SetValue(1.0)
+            mcm.FixedProperties.aaslrAllowChildrenFlag.SetValue(1.0)
         EndIf
         mcm.S_AllowChildren = !mcm.S_AllowChildren
         mcm.SetToggleOptionValue(mcm.oid_SettingS_AllowChildren, mcm.S_AllowChildren)
-        Logger("AllowChildrenFlag:" + mcm.FixedMerchantProperties.aaslrAllowChildrenFlag.GetValue())
+        Logger("AllowChildrenFlag:" + mcm.FixedProperties.aaslrAllowChildrenFlag.GetValue())
     ElseIf (optionId == mcm.oid_SettingS_AllowAnimals)
         If (mcm.S_AllowAnimals)
-            mcm.FixedMerchantProperties.aaslrallowBeastsFlag.SetValue(2.0)
+            mcm.FixedProperties.aaslrallowBeastsFlag.SetValue(2.0)
         Else
-            mcm.FixedMerchantProperties.aaslrallowBeastsFlag.SetValue(1.0)
+            mcm.FixedProperties.aaslrallowBeastsFlag.SetValue(1.0)
         EndIf     
         mcm.S_AllowAnimals = !mcm.S_AllowAnimals
         mcm.SetToggleOptionValue(mcm.oid_SettingS_AllowAnimals, mcm.S_AllowAnimals)
-        Logger("AllowAnimalFlag:" + mcm.FixedMerchantProperties.aaslrallowBeastsFlag.GetValue())
+        Logger("AllowAnimalFlag:" + mcm.FixedProperties.aaslrallowBeastsFlag.GetValue())
     ElseIf (optionId == mcm.oid_Settings_EnableHotKeyUse)
         mcm.S_EnableHotKeyUse = !mcm.S_EnableHotKeyUse
         mcm.SetToggleOptionValue(mcm.oid_Settings_EnableHotKeyUse, mcm.S_EnableHotKeyUse, true)
-        mcm.FixedMerchantProperties.EnableHotKeyUse = mcm.S_EnableHotKeyUse
+        mcm.FixedProperties.EnableHotKeyUse = mcm.S_EnableHotKeyUse
         ToggleHotKeyOptions(mcm)
     ElseIf (optionId == mcm.oid_Settings_RequireTwoKeys)
         mcm.S_RequireTwoKeys = !mcm.S_RequireTwoKeys
         mcm.SetToggleOptionValue(mcm.oid_Settings_RequireTwoKeys, mcm.S_RequireTwoKeys)
-        mcm.FixedMerchantProperties.RequireTwoKeys = mcm.S_RequireTwoKeys
+        mcm.FixedProperties.RequireTwoKeys = mcm.S_RequireTwoKeys
     ElseIf (optionId == mcm.oid_Settings_LowCountReset)
         mcm.S_LowCountReset = !mcm.S_LowCountReset
         mcm.SetToggleOptionValue(optionId, mcm.S_LowCountReset)
-        mcm.FixedMerchantProperties.LowCountReset = mcm.S_LowCountReset
+        mcm.FixedProperties.LowCountReset = mcm.S_LowCountReset
     EndIf    
 EndFunction
 
@@ -158,10 +158,10 @@ Function OnKeyMapChanged(YoureHiredMCM mcm, int optionId, int keyCode, string co
     if (continue)
         If (optionId == mcm.oid_Settings_ResetHotkey)
             mcm.oid_Settings_ResetHotkey = keyCode
-            mcm.FixedMerchantProperties.Hotkey = keyCode
+            mcm.FixedProperties.Hotkey = keyCode
         ElseIf (optionId == mcm.oid_Settings_SecondaryResetHotkey)
             mcm.oid_Settings_SecondaryResetHotkey = keyCode
-            mcm.FixedMerchantProperties.SecondaryHotkey = keyCode
+            mcm.FixedProperties.SecondaryHotkey = keyCode
         EndIf
         mcm.SetKeymapOptionValue(optionId, keyCode)
     endIf
@@ -215,37 +215,37 @@ EndFunction
 Function OnDefault(YoureHiredMCM mcm, int optionId) global
     If (optionId == mcm.oid_Settings_FenceEnabled)
         mcm.S_FenceEnabled = false
-        mcm.FixedMerchantProperties.aaslrFenceWantedFlag.SetValue(0.0)
+        mcm.FixedProperties.aaslrFenceWantedFlag.SetValue(0.0)
         mcm.SetToggleOptionValue(mcm.oid_Settings_FenceEnabled, mcm.S_FenceEnabled)
-        Logger("Fence Enabled: " + mcm.FixedMerchantProperties.aaslrFenceWantedFlag.GetValue())
+        Logger("Fence Enabled: " + mcm.FixedProperties.aaslrFenceWantedFlag.GetValue())
     ElseIf (optionId == mcm.oid_Settings_RecruitmentEnabled)
         mcm.S_RecruitmentEnabled = false
-        mcm.FixedMerchantProperties.aaslrNowHiringFlagGlobal.SetValue(0.0)
+        mcm.FixedProperties.aaslrNowHiringFlagGlobal.SetValue(0.0)
         mcm.SetToggleOptionValue(mcm.oid_Settings_RecruitmentEnabled, mcm.S_RecruitmentEnabled)
-        Logger("Now Hiring!: " + mcm.FixedMerchantProperties.aaslrNowHiringFlagGlobal.GetValue())
+        Logger("Now Hiring!: " + mcm.FixedProperties.aaslrNowHiringFlagGlobal.GetValue())
     ElseIf (optionId == mcm.oid_Settings_RepeatEnabled)
         mcm.S_RepeatEnabled = false
-        mcm.FixedMerchantProperties.aaslrRepeatCustomerFlagGlobal.SetValueInt(0)
+        mcm.FixedProperties.aaslrRepeatCustomerFlagGlobal.SetValueInt(0)
         mcm.SetToggleOptionValue(mcm.oid_Settings_RepeatEnabled, mcm.S_RepeatEnabled)
-        Logger("Repeat Customer: " + mcm.FixedMerchantProperties.aaslrNowHiringFlagGlobal.GetValueInt())
+        Logger("Repeat Customer: " + mcm.FixedProperties.aaslrNowHiringFlagGlobal.GetValueInt())
     ElseIf (optionId == mcm.oid_Settings_ResetVanillaEnabled)
         mcm.S_ResetVanillaEnabled = false
-        mcm.FixedMerchantProperties.aaslrResetVanillaFlagGlobal.SetValue(0.0)
+        mcm.FixedProperties.aaslrResetVanillaFlagGlobal.SetValue(0.0)
         mcm.SetToggleOptionValue(mcm.oid_Settings_ResetVanillaEnabled, mcm.S_ResetVanillaEnabled)
-        Logger("Reset Vanilla: " + mcm.FixedMerchantProperties.aaslrResetVanillaFlagGlobal.GetValue())
+        Logger("Reset Vanilla: " + mcm.FixedProperties.aaslrResetVanillaFlagGlobal.GetValue())
     ElseIf (optionId == mcm.oid_SettingS_AllowChildren)
         mcm.S_AllowChildren = false
-        mcm.FixedMerchantProperties.aaslrAllowChildrenFlag.SetValue(2.0)
+        mcm.FixedProperties.aaslrAllowChildrenFlag.SetValue(2.0)
         mcm.SetToggleOptionValue(mcm.oid_SettingS_AllowChildren, mcm.S_AllowChildren)
-        Logger("AllowChildrenFlag:" + mcm.FixedMerchantProperties.aaslrAllowChildrenFlag.GetValue())
+        Logger("AllowChildrenFlag:" + mcm.FixedProperties.aaslrAllowChildrenFlag.GetValue())
     ElseIf (optionId == mcm.oid_SettingS_AllowAnimals)
         mcm.S_AllowAnimals = false
-        mcm.FixedMerchantProperties.aaslrallowBeastsFlag.SetValue(2.0)
+        mcm.FixedProperties.aaslrallowBeastsFlag.SetValue(2.0)
         mcm.SetToggleOptionValue(mcm.oid_SettingS_AllowAnimals, mcm.S_AllowAnimals)
-        Logger("allowAnimalsFlag:" + mcm.FixedMerchantProperties.aaslrallowBeastsFlag.GetValue())
+        Logger("allowAnimalsFlag:" + mcm.FixedProperties.aaslrallowBeastsFlag.GetValue())
     ElseIf (optionId == mcm.oid_Settings_MaxGoldInChest)
         mcm.S_MaxGoldInChest = 6800.0
-        mcm.FixedMerchantProperties.MaxGoldValue = mcm.S_MaxGoldInChest
+        mcm.FixedProperties.MaxGoldValue = mcm.S_MaxGoldInChest
         mcm.SetSliderOptionValue(optionId, mcm.S_MaxGoldInChest, "When Above {0}")
     ElseIf (optionId == mcm.oid_Settings_EnableHotKeyUse)
         mcm.S_EnableHotKeyUse = false
@@ -260,7 +260,7 @@ Function OnDefault(YoureHiredMCM mcm, int optionId) global
             mcm.S_Hotkey = 38 ; 'L'
         EndIf
         mcm.SetKeyMapOptionValue(optionId, mcm.S_Hotkey)
-        mcm.FixedMerchantProperties.Hotkey = mcm.S_Hotkey
+        mcm.FixedProperties.Hotkey = mcm.S_Hotkey
     ElseIf (optionId == mcm.oid_Settings_SecondaryResetHotkey)
         If (Game.UsingGamepad())
             mcm.S_SecondaryHotkey = 180 ; Left-Trigger
@@ -268,23 +268,23 @@ Function OnDefault(YoureHiredMCM mcm, int optionId) global
             mcm.S_SecondaryHotkey = 157 ; Rifght-crtl
         EndIf
         mcm.SetKeyMapOptionValue(optionId, mcm.S_SecondaryHotkey)
-        mcm.FixedMerchantProperties.SecondaryHotkey = mcm.S_SecondaryHotkey
+        mcm.FixedProperties.SecondaryHotkey = mcm.S_SecondaryHotkey
     ElseIf (optionId == mcm.oid_Settings_DaysBetweenReset)
         mcm.S_NumDaysBetweenReset = 2.0
-        mcm.FixedMerchantProperties.DaysBeforeReset = mcm.S_NumDaysBetweenReset
+        mcm.FixedProperties.DaysBeforeReset = mcm.S_NumDaysBetweenReset
         mcm.SetSliderOptionValue(optionId, mcm.S_NumDaysBetweenReset, "Every {1} Days")
     ElseIf (optionId == mcm.oid_Settings_ResetOnMenuClose)
         If (mcm.S_ResetOnMenuClose)
             mcm.SetOptionFlags(mcm.oid_Settings_DaysBetweenReset, mcm.OPTION_FLAG_NONE, true)            
         EndIf
         mcm.S_ResetOnMenuClose = false
-        mcm.FixedMerchantProperties.ResetOnMenuClose = false
-        mcm.FixedMerchantProperties.SetToggleBetweenMenuOrGametimeReset()
-        mcm.FixedMerchantProperties.SetUpdateNeeded()
+        mcm.FixedProperties.ResetOnMenuClose = false
+        mcm.FixedProperties.SetToggleBetweenMenuOrGametimeReset()
+        mcm.FixedProperties.SetUpdateNeeded()
         mcm.SetToggleOptionValue(optionId, mcm.S_ResetOnMenuClose)
     ElseIf (optionId == mcm.oid_Settings_LowCountReset)
         mcm.S_LowCountReset = false
-        mcm.FixedMerchantProperties.LowCountReset = false
+        mcm.FixedProperties.LowCountReset = false
         mcm.SetToggleOptionValue(optionId, mcm.S_LowCountReset)
     EndIf 
 EndFunction ; OnDefault
@@ -306,11 +306,11 @@ EndFunction
 Function OnSliderAccept(YoureHiredMCM mcm, int optionId, float value) global
     if optionId == mcm.oid_Settings_MaxGoldInChest
         mcm.S_MaxGoldInChest = value
-        mcm.FixedMerchantProperties.MaxGoldValue = value
+        mcm.FixedProperties.MaxGoldValue = value
         mcm.SetSliderOptionValue(optionId, value, "When Above {0}")
     elseif optionId == mcm.oid_Settings_DaysBetweenReset
         mcm.S_NumDaysBetweenReset = value
-        mcm.FixedMerchantProperties.DaysBeforeReset = mcm.S_NumDaysBetweenReset
+        mcm.FixedProperties.DaysBeforeReset = mcm.S_NumDaysBetweenReset
         mcm.SetSliderOptionValue(optionId, mcm.S_NumDaysBetweenReset, "Every {1} Days")
     endIf
 EndFunction
@@ -330,7 +330,7 @@ EndFunction
 Function ToggleHotKeyOptions(YoureHiredMCM mcm) global
     int flag
     If (mcm.S_EnableHotKeyUse)
-        mcm.FixedMerchantProperties.YHVanillaManagerScript.ListenForMenuAndHotKeys()
+        mcm.FixedProperties.YHVanillaManagerScript.ListenForMenuAndHotKeys()
         flag = mcm.OPTION_FLAG_NONE
         If (mcm.S_RequireTwoKeys)
             mcm.SetOptionFlags(mcm.oid_Settings_SecondaryResetHotkey, mcm.OPTION_FLAG_NONE, true)
@@ -338,10 +338,12 @@ Function ToggleHotKeyOptions(YoureHiredMCM mcm) global
             mcm.SetOptionFlags(mcm.oid_Settings_SecondaryResetHotkey, mcm.OPTION_FLAG_DISABLED, true)
         EndIf
     Else
-        mcm.FixedMerchantProperties.YHVanillaManagerScript.StopListenting()
+        mcm.FixedProperties.YHVanillaManagerScript.StopListenting()
         flag = mcm.OPTION_FLAG_DISABLED
         mcm.SetOptionFlags(mcm.oid_Settings_SecondaryResetHotkey, mcm.OPTION_FLAG_DISABLED, true)
-    EndIf
+    EndIf    
+
+    ; mcm.FixedProperties.SendModEvent("aaslrYH_UpdateResetCriteria")
     mcm.SetOptionFlags(mcm.oid_Settings_ResetHotkey, flag, true)
     mcm.SetOptionFlags(mcm.oid_Settings_RequireTwoKeys, flag)
 EndFunction

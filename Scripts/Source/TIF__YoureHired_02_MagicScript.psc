@@ -14,4 +14,4 @@ EndFunction
 ;END FRAGMENT CODE - Do not edit anything between this and the begin comment
 
 
-YoureHiredMerchantManagerScript property YoureHiredMMScript auto
+MerchantScript property YoureHiredMMScript auto

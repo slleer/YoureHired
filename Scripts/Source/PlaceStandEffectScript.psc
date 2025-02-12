@@ -1,27 +1,27 @@
 Scriptname PlaceStandEffectScript extends ActiveMagicEffect  
 
-YoureHiredMerchantPropertiesScript property FixedMerchantProperties auto
+YoureHiredMerchantPropertiesScript property FixedProperties auto
 
 Activator property MerchantStandActivator auto
 Furniture property MerchantStandFurniture auto
 ObjectReference property xmarker auto
+ObjectReference property mapMarker01 auto
+ObjectReference property MerchantStandRef auto
+ObjectReference property WriteLedgerIdle auto
+ObjectReference property BrowseIdle auto
+ObjectReference property SweepIdle auto
+ObjectReference property WipeBrowIdle auto
 
 
 Event OnEffectStart(Actor akTarget, Actor akCaster)
-    If (akCaster == Game.GetPlayer())
-        YHUtil.Log("We are in effect event")
-        ; xmarker.MoveTo(akCaster)
-        ; xmarker.SetAngle(0.0,0.0,xmarker.GetAngleZ())
-        ; YHUtil.Log("Moved the xmarker")
 
-        ; xmarker.MoveTo(akCaster, FixedMerchantProperties.MerchantStand.GetLength() * Math.Sin(akCaster.GetAngleZ()), FixedMerchantProperties.MerchantStand.GetLength() * Math.Cos(akCaster.GetAngleZ()), - 5.0, false)
-        ; ; ObjectReference newStand = xmarker.PlaceAtMe(FixedMerchantProperties.MrkMarketStall01, 1, true, false)
-        ; ; YHUtil.Log("Here's the navcut stand: " + newStand)
-        ; ObjectReference newFurniture = xmarker.PlaceAtMe(MerchantStandFurniture, 1, true, false)
-        ; YHUtil.Log("Here's the navcut furniture: " + newFurniture)
-        ; ObjectReference newActivator = xmarker.PlaceAtMe(MerchantStandActivator, 1, true, false)
-        ; YHUtil.Log("Here's the activator: " + newActivator)       
-        
+    Form[] containerForms = Game.GetPlayer().GetContainerForms()
+    int index = containerForms.Length
+    ObjectReference asObj
+    Form asForm
+    YHUtil.Log("We are about to start the loop")
 
-    EndIf
+    YHUtil.Log("We are out of the loop")
+    
+    
 EndEvent

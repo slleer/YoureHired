@@ -6,9 +6,8 @@ YoureHiredMerchantPropertiesScript property FixedMerchantProperties auto
 FormList property Merchants auto
 
 
-YoureHiredBusinessManagerScript[] filledMerchantAliases
-YoureHiredBusinessManagerScript[] merchantAliasScripts
-YoureHIredBusinessManagerScript[] testingSKSEAliasArrayCreation
+BusinessScript[] filledMerchantAliases
+BusinessScript[] merchantAliasScripts
 string[] merchantNames
 
 int NextOpenAlias
@@ -21,15 +20,13 @@ Event OnInit()
     Logger("We are in the OnInit",logType = 2)
     Logger(logType = 3)
     myQuest = Quest.GetQuest("aaslrYoureHiredMainQuest")
-    int numAlias = myQuest.GetNumAliases()
-    filledMerchantAliases = new YoureHiredBusinessManagerScript[12]
-    merchantAliasScripts = new YoureHiredBusinessManagerScript[12]
+    int numAlias = FixedMerchantProperties.aaslrMaxNumberMerchants.GetValueInt()
+    filledMerchantAliases = new BusinessScript[12]
+    merchantAliasScripts = new BusinessScript[12]
     merchantNames = Utility.CreateStringArray(numAlias,"*EMPTY*")
     int index = 0
-    YoureHiredBusinessManagerScript MerchantScript
     While (index < numAlias)
-        MerchantScript = (myQuest.GetNthAlias(index) as YoureHiredBusinessManagerScript)
-        merchantAliasScripts[index] = MerchantScript
+        merchantAliasScripts[index] = (myQuest.GetNthAlias(index) as BusinessScript)
         index += 1
     EndWhile
     NextOpenAlias = 0
@@ -39,12 +36,11 @@ EndEvent
 Event OnMenuClose(string openMenu)
     Logger("The menu that was closed is: " + openMenu)
     if openMenu == "Journal Menu"
-        Logger("Just closed the journal menu")
         If FixedMerchantProperties.UpdateNeeded > 0
             int index = 0
             Logger("Need to update")
-            YoureHiredBusinessManagerScript thisMerchant
-            While index < FixedMerchantProperties.GetNumMerchantsGlobal()
+            BusinessScript thisMerchant
+            While index < FixedMerchantProperties.aaslrMaxNumberMerchants.GetValueInt()
                 thisMerchant = FilledMerchantAliases[index]
                 Logger("This merchant" + thisMerchant)
                 if thisMerchant
@@ -77,7 +73,7 @@ Function Logger(string textToLog = "", bool logFlag = true, int logType = 1)
     EndIf
 EndFunction
 
-YoureHiredBusinessManagerScript[] Function GetMerchantAliasScripts()
+BusinessScript[] Function GetMerchantAliasScripts()
     return merchantAliasScripts
 EndFunction
 
@@ -115,7 +111,7 @@ bool Function IsValidMerchantType(Actor akMerchant)
 EndFunction
 
 ;Add or remove an actor as a merchant
-Function AddRemoveMerchant(Actor akMerchant)
+Function HandleMerchant(Actor akMerchant)
     Logger("In AddRemoveMerchant with: " + akMerchant.GetBaseObject().GetName(), 2)
     If (Merchants.HasForm(akMerchant))
         DoRemoveMerchant(akMerchant)
@@ -157,16 +153,16 @@ EndFunction
 
 Function DoAddMerchant(Actor akMerchant)
     Logger("Actor is not yet a merchant, in DoAddMerchant")
-    YoureHiredBusinessManagerScript MerchantScript = merchantAliasScripts[NextOpenAlias]
+    BusinessScript newMerchant = merchantAliasScripts[NextOpenAlias]
     bool success
-    If (!MerchantScript.GetActorReference())             
-        success = MerchantScript.FillAliasWithActor(akMerchant)
+    If (!newMerchant.GetActorReference())             
+        success = newMerchant.FillAliasWithActor(akMerchant)
         if success
             FixedMerchantProperties.SetNumMerchantsGlobal(1.0)
             myQuest.UpdateCurrentInstanceGlobal(FixedMerchantProperties.aaslrNumberOfMerchants)
             (FixedMerchantProperties.AddedMerchantMessageFormList.GetAt(NextOpenAlias) as Message).Show()
         endIf
-        filledMerchantAliases[NextOpenAlias] = MerchantScript
+        filledMerchantAliases[NextOpenAlias] = newMerchant
         Merchants.AddForm(akMerchant)
         NextOpenAlias = filledMerchantAliases.Find(NONE)
         ; bool packageSuccess = MerchantScript.TryToEvaluatePackage()
@@ -186,7 +182,7 @@ Function RemoveMerchant(Actor akMerchant)
 EndFunction
 
 Function DoRemoveMerchant(Actor akMerchant)
-    YoureHiredBusinessManagerScript exMerchant = GetMerchant(akMerchant)
+    BusinessScript exMerchant = GetMerchant(akMerchant)
     Logger("actor is already a merchant")
     FixedMerchantProperties.SetNumMerchantsGlobal(-1.0)
     myQuest.UpdateCurrentInstanceGlobal(FixedMerchantProperties.aaslrNumberOfMerchants)
@@ -198,7 +194,7 @@ Function DoRemoveMerchant(Actor akMerchant)
     Logger("Actor cleared from alias!!!")
 EndFunction
 
-Function RemoveThisMerchant(YoureHiredBusinessManagerScript thisMerchant)
+Function RemoveThisMerchant(BusinessScript thisMerchant)
     Merchants.RemoveAddedForm(thisMerchant.GetActorReference())
     int index = filledMerchantAliases.Find(thisMerchant)
     Logger("The index for this merchant is " + index + " and the merchant name from that index is: " + filledMerchantAliases[index].GetActorName())
@@ -211,7 +207,7 @@ Function RemoveThisMerchant(YoureHiredBusinessManagerScript thisMerchant)
     Logger("Removed this merchant")
 EndFunction
 
-Function RemoveThisDeadDisabledMerchant(YoureHiredBusinessManagerScript thisMerchant, bool isDead)
+Function RemoveThisDeadDisabledMerchant(BusinessScript thisMerchant, bool isDead)
     Merchants.RemoveAddedForm(thisMerchant.GetActorReference())
     int index = filledMerchantAliases.Find(thisMerchant)
     Logger("The index for this merchant is " + index + " and the merchant name from that index is: " + filledMerchantAliases[index].GetActorName())
@@ -231,7 +227,7 @@ EndFunction
 Function RemoveAllMerchants()
     int numMerchants = merchantAliasScripts.Length
     Logger("About to remove all Merchants")
-    YoureHiredBusinessManagerScript thisMerhcant
+    BusinessScript thisMerhcant
     While (numMerchants)
         numMerchants -= 1
         thisMerhcant = filledMerchantAliases[numMerchants]
@@ -252,7 +248,7 @@ EndFunction
 Function ChangeChestType(Actor akMerchant, string chestType)
     bool success
     If (Merchants.HasForm(akMerchant))
-        YoureHiredBusinessManagerScript merchant = GetMerchant(akMerchant)
+        BusinessScript merchant = GetMerchant(akMerchant)
         If (merchant)            
             success = merchant.changeChestType(chestType)
             Logger("Chest type changed to: " + chestType)
@@ -264,7 +260,7 @@ Function YHShowBarterMenu(Actor akSpeaker)
     Logger("In YHShowBarterMenu!!!!!")
     If (Merchants.HasForm(akSpeaker))
         Logger("We found the merchant: " + akSpeaker.GetBaseObject().GetName())
-        YoureHiredBusinessManagerScript merchant = GetMerchant(akSpeaker)
+        BusinessScript merchant = GetMerchant(akSpeaker)
         If (merchant)
             FixedMerchantProperties.IsManagedMerchantTrading = true
             If (FixedMerchantProperties.EnableHotKeyUse)
@@ -283,7 +279,7 @@ EndFunction
 
 Function PromoteToFence(Actor akFence)
     If (Merchants.HasForm(akFence))
-        YoureHiredBusinessManagerScript newFence = GetMerchant(akFence)
+        BusinessScript newFence = GetMerchant(akFence)
         If (newFence)
             newFence.PromoteToFence()
         EndIf
@@ -292,9 +288,9 @@ Function PromoteToFence(Actor akFence)
     EndIf
 EndFunction
 
-YoureHiredBusinessManagerScript Function GetMerchant(Actor akMerchant)
+BusinessScript Function GetMerchant(Actor akMerchant)
     int index = 0
-    YoureHiredBusinessManagerScript foundMerchant
+    BusinessScript foundMerchant
     While (index < filledMerchantAliases.Length)
         foundMerchant = merchantAliasScripts[index]
         If (foundMerchant && foundMerchant.GetActorReference() == akMerchant)
@@ -307,7 +303,7 @@ YoureHiredBusinessManagerScript Function GetMerchant(Actor akMerchant)
 EndFunction
 
 Function ResetChest(Actor akMerchant)
-    YoureHiredBusinessManagerScript merchantToReset = GetMerchant(akMerchant)
+    BusinessScript merchantToReset = GetMerchant(akMerchant)
     if(merchantToReset)
         merchantToReset.MerchantChestScript.ResetChest(false)
     endIf

@@ -1,7 +1,7 @@
 Scriptname YoureHiredSetUpStandEffectScript extends ActiveMagicEffect  
 {Used for placing a merchant stand. TEST}
 
-YoureHiredMerchantPropertiesScript property FixedMerchantProperties auto
+YoureHiredMerchantPropertiesScript property FixedProperties auto
 ReferenceAlias property thisMerchant auto
 ObjectReference property xmarker auto
 Furniture property StallIdleFurniture auto
@@ -18,20 +18,20 @@ Event OnEffectStart(Actor akTarget, Actor akCaster)
             xmarker.MoveTo(akCaster)
             xmarker.SetAngle(0.0,0.0,xmarker.GetAngleZ())
             YHUtil.Log("Moved the xmarker")
-            float x = (FixedMerchantProperties.MerchantStand.GetLength() * Math.Sin(akCaster.GetAngleZ()))
-            float y = (FixedMerchantProperties.MerchantStand.GetLength() * Math.Cos(akCaster.GetAngleZ()))
+            float x = (FixedProperties.MerchantStand.GetLength() * Math.Sin(akCaster.GetAngleZ()))
+            float y = (FixedProperties.MerchantStand.GetLength() * Math.Cos(akCaster.GetAngleZ()))
             YHUtil.Log("X:" + x + ", Y:" + y)
-            YHUtil.Log("Length: " + FixedMerchantProperties.MerchantStand.GetLength())
-            YHUtil.Log("Width: " + FixedMerchantProperties.MerchantStand.GetWidth())
-            if fixedMerchantProperties.CounterLeanIdleRef
+            YHUtil.Log("Length: " + FixedProperties.MerchantStand.GetLength())
+            YHUtil.Log("Width: " + FixedProperties.MerchantStand.GetWidth())
+            if FixedProperties.CounterLeanIdleRef
                 YHUtil.Log("Getting rid of old idle markers")
-                fixedMerchantProperties.CounterLeanIdleRef.Disable()
-                fixedMerchantProperties.CounterLeanIdleRef.Delete()
+                FixedProperties.CounterLeanIdleRef.Disable()
+                FixedProperties.CounterLeanIdleRef.Delete()
             endIf
-            If FixedMerchantProperties.MerchantStand
+            If FixedProperties.MerchantStand
                 YHUtil.Log("getting rid of old mechant stall")
-                fixedMerchantProperties.MerchantStand.Disable()
-                fixedMerchantProperties.MerchantStand.Delete()
+                FixedProperties.MerchantStand.Disable()
+                FixedProperties.MerchantStand.Delete()
             EndIf
             
             ; Set the marker and place the counterLeanIdle
@@ -44,7 +44,7 @@ Event OnEffectStart(Actor akTarget, Actor akCaster)
             EndIf
 
             ObjectReference newStall = xmarker.PlaceAtMe(StallIdleFurniture, 1, true, false)
-            FixedMerchantProperties.CounterLeanIdleRef = newStall
+            FixedProperties.CounterLeanIdleRef = newStall
             newStall.SetAngle(0,0,newStall.GetAngleZ())
             YHUtil.Log("Idle Length: " + newStall.GetLength())
             YHUtil.Log("Idle Width: " + newStall.GetWidth())
@@ -61,15 +61,15 @@ Event OnEffectStart(Actor akTarget, Actor akCaster)
             float y2 = (newStall.GetLength() * Math.Cos(akCaster.GetAngleZ()))
             float diffX = (x2 - x) / 2
             float diffY = (y2 - y) / 2
-            xmarker.MoveTo(akCaster, (FixedMerchantProperties.MerchantStand.GetLength() + diffX) * Math.Sin(akCaster.GetAngleZ()), (FixedMerchantProperties.MerchantStand.GetLength() + diffY) * Math.Cos(akCaster.GetAngleZ()), - 5.0, false)
+            xmarker.MoveTo(akCaster, (FixedProperties.MerchantStand.GetLength() + diffX) * Math.Sin(akCaster.GetAngleZ()), (FixedProperties.MerchantStand.GetLength() + diffY) * Math.Cos(akCaster.GetAngleZ()), - 5.0, false)
             ObjectReference newActivator = xmarker.PlaceAtMe(StallManagementActivator, 1, true, false)
-            FixedMerchantProperties.MerchantStand = newActivator
+            FixedProperties.MerchantStand = newActivator
             newActivator.SetAngle(0,0,newActivator.GetAngleZ())
             xmarker.MoveTo(akCaster, abMatchRotation = false)
             YHUtil.Log("The stand location is X:" + newActivator.GetPositionX() + ", Y:" + newActivator.GetPositionY() + ", Z:" + newActivator.GetPositionZ())
             
             if thisMerchant.GetActorReference()
-                YHUtil.Log("ThisMerchant" + (thisMerchant as YoureHiredBusinessManagerScript).GetActorName() + ", " + (thisMerchant as YoureHiredBusinessManagerScript).GetChestType())
+                YHUtil.Log("ThisMerchant" + (thisMerchant as BusinessScript).GetActorName() + ", " + (thisMerchant as BusinessScript).GetChestType())
                 YHUtil.Log("Checking the actor's packages: " + thisMerchant.GetActorReference().GetCurrentPackage())
                 ; bool packageEvaluated = thisMerchant.TryToEvaluatePackage()
                 ; YHUtil.Log("Package evaluation: " + packageEvaluated)

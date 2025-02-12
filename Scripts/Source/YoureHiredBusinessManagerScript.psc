@@ -36,22 +36,24 @@ Event OnDeath(Actor akKiller)
     If (GetActorReference().IsDead())
         YHUtil.Log(self + " The actor has been killed")
         string deadMerchant = GetActorName()
-        FixedMerchantProperties.YHMerchantManagerScript.RemoveThisDeadDisabledMerchant(self, true)
+        ReferenceAlias ref = self as ReferenceAlias
+        FixedMerchantProperties.MerchantManager.RemoveThisDeadDisabledMerchant(ref as BusinessScript, true)
         YHUtil.Log(self + " " + deadMerchant + " was removed.")
     EndIf
 EndEvent
 
 Event OnUnload()
     YHUtil.Log(self + " In OnUnload ")
+    ReferenceAlias ref = self as ReferenceAlias
     If (GetActorReference().IsDisabled())
         YHUtil.Log(self + " Actor is disabled OH NO!!")
-        FixedMerchantProperties.YHMerchantManagerScript.RemoveThisDeadDisabledMerchant(self, false)
+        FixedMerchantProperties.MerchantManager.RemoveThisDeadDisabledMerchant(ref as BusinessScript, false)
         YHUtil.Log(self + " The disabled actor has been removed!!! ")
         return
     EndIf
     If (GetActorReference().IsDeleted())
         YHUtil.Log(self + " ACtor has been deleted!!!! WAHH NAIGH")
-        FixedMerchantProperties.YHMerchantManagerScript.RemoveThisDeadDisabledMerchant(self, false)
+        FixedMerchantProperties.MerchantManager.RemoveThisDeadDisabledMerchant(ref as BusinessScript, false)
         YHUtil.Log(self + " The deleted actor has been removed!!! ")
         return
     EndIf
@@ -174,6 +176,14 @@ bool Function FillAliasWithActor(Actor akMerchant)
         _actorName = akMerchant.GetBaseObject().GetName()
         FillProxy(akMerchant)
         ChangeChestType("Random")
+        ObjectReference invMerchantStandOwned = FixedMerchantProperties.InvMerchantStand
+        FixedMerchantProperties.InvMerchantStand = invMerchantStandOwned.PlaceAtMe((invMerchantStandOwned.GetBaseObject()), 1, true, false)
+        YHUtil.Log("old: " + invMerchantStandOwned + ", new: " + FixedMerchantProperties.InvMerchantStand)
+        invMerchantStandOwned.SetDisplayName(_actorName + "'s Merchant Stall")
+        (invMerchantStandOwned as InventortyItemScript).thisFaction = YoureHiredFaction
+        ; invMerchantStandOwned.SetFactionOwner(YoureHiredFaction)
+        FixedMerchantProperties.InvMerchantStand.SetAngle(0,0,invMerchantStandOwned.GetAngleZ()+90)
+        ProxyActor.AddItem(invMerchantStandOwned,1,true)
     endIf
     return success
 EndFunction
@@ -182,6 +192,7 @@ Function ClearActorFromAlias()
     ResetFactionContainer()
     _actorName = ""
     ResetProxy()
+    PromoteToFence(true)
     ClearJobTypeFactions()
     self.Clear()
 EndFunction
@@ -199,6 +210,7 @@ EndFunction
 ;Disables and deletes the proxy instance
 Function ResetProxy()
     ; ProxyActor.RemoveFromAllFactions()
+
     ProxyActor.DisableNoWait()
     ProxyActor.Delete()
     ProxyActor = NONE
