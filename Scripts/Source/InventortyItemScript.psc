@@ -23,19 +23,16 @@ ObjectReference property SweepIdle auto
 ObjectReference property WipeBrowIdle auto
 GlobalVariable property Merchant_01_PackageEnable auto
 
-bool itemUsed = false
 bool isChild = false
 Quest yhQuest
 BusinessScript owningMerchant
 ObjectReference standRef
 Furniture merchantFurniture
-string teststring
 
 
 Event OnInit()
     yhQuest = Quest.GetQuest("aaslrYoureHiredMainQuest")
     YHUtil.Log("INVENTORY: We are in the inventory items on init")
-    teststring = " we are the test string "
     standRef = MerchantStandRef
     merchantFurniture = MerchantStandFurniture
     ; Self.RegisterForMenu("InventoryMenu")
@@ -56,7 +53,7 @@ Event OnEquipped(Actor akActor)
         ; If (owningMerchant && !FixedProperties.InventoryBusy)
         ; FixedProperties.InventoryBusy = true
         YHUtil.Log("about to see if gate is locked")
-        If (owningMerchant && !locked)
+        If (owningMerchant.ProxyActor && !locked)
             locked = true
             YHUtil.Log("we are passed the locked gate")
 
@@ -160,7 +157,7 @@ Event OnEquipped(Actor akActor)
             YHUtil.Log("The global is: " + Merchant_01_PackageEnable.GetValueInt())
             If (Game.GetPlayer().GetItemCount(Self))
                 YHUtil.Log("The player has this item (self)")
-            
+                owningMerchant.ClearInventoryMerchantStall()
                 Game.GetPlayer().RemoveItem(self)
             EndIf
             locked = false
@@ -172,7 +169,7 @@ EndEvent
 
 Event OnContainerChanged(ObjectReference akNewContainer, ObjectReference akOldContainer)
 
-    YHUtil.Log("We are in teh change container event." + teststring)
+    YHUtil.Log("We are in teh change container event.")
     if akOldContainer && !akNewContainer
         if ShowDropMessage
             int answer = DropStallMessage.Show()

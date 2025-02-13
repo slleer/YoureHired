@@ -102,6 +102,7 @@ Function DestroyThisMerchantStand()
         ObjectReference invMerchantStandOwned = (YoureHired as YoureHiredMerchantPropertiesScript).GetInventoryStand()
         (invMerchantStandOwned as InventortyItemScript).SetOwningMerchant(owningMerchant)
         invMerchantStandOwned.SetDisplayName(owningMerchant.GetActorName() + "'s Merchant Stall")
+        owningMerchant.SetInventoryMerchantStall(invMerchantStandOwned)
         (YoureHired as YoureHiredMerchantPropertiesScript).PlayerRef.AddItem(invMerchantStandOwned, 1, true)
     endIf
     (YoureHired as YoureHiredMerchantPropertiesScript).RemoveActivatorFromList(self)

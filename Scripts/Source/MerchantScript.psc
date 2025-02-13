@@ -113,44 +113,46 @@ bool Function IsValidMerchantType(Actor akMerchant)
     return false
 EndFunction
 
-;Add or remove an actor as a merchant
-Function HandleMerchant(Actor akMerchant)
-    Logger("In AddRemoveMerchant with: " + akMerchant.GetBaseObject().GetName(), 2)
-    If (hiredActors.Find(akMerchant) > -1)
-        DoRemoveMerchant(akMerchant)
-    ElseIf IsValidMerchantType(akMerchant)
-        If (FixedProperties.GetNumMerchantsGlobal() < (FixedProperties.aaslrMaxNumberMerchants.GetValue() as int))
-            Logger("Actor is not yet a merchant")
-            if NextOpenAlias > -1
-                DoAddMerchant(akMerchant)
-            Else
-                NextOpenAlias = hiredActors.Find(NONE)
-                if NextOpenAlias == -1
-                    FixedProperties.aaslrNumberOfMerchants.SetValue(FixedProperties.aaslrMaxNumberMerchants.GetValue())
-                    FixedProperties.FullMerchantListMessage.Show()
-                Else
-                    DoAddMerchant(akMerchant)
-                EndIf
-            endIf
-        Else
-            Logger("NextOpenAlias pointed to filled alias")
-            FixedProperties.FullMerchantListMessage.Show()
-        EndIf
-    EndIf
-EndFunction
+; ;Add or remove an actor as a merchant
+; Function HandleMerchant(Actor akMerchant)
+;     Logger("In AddRemoveMerchant with: " + akMerchant.GetBaseObject().GetName(), 2)
+;     If (hiredActors.Find(akMerchant) > -1)
+;         DoRemoveMerchant(akMerchant)
+;     ElseIf IsValidMerchantType(akMerchant)
+;         If (FixedProperties.GetNumMerchantsGlobal() < (FixedProperties.aaslrMaxNumberMerchants.GetValue() as int))
+;             Logger("Actor is not yet a merchant")
+;             if NextOpenAlias > -1
+;                 DoAddMerchant(akMerchant)
+;             Else
+;                 NextOpenAlias = hiredActors.Find(NONE)
+;                 if NextOpenAlias == -1
+;                     FixedProperties.aaslrNumberOfMerchants.SetValue(FixedProperties.aaslrMaxNumberMerchants.GetValue())
+;                     FixedProperties.FullMerchantListMessage.Show()
+;                 Else
+;                     DoAddMerchant(akMerchant)
+;                 EndIf
+;             endIf
+;         Else
+;             Logger("NextOpenAlias pointed to filled alias")
+;             FixedProperties.FullMerchantListMessage.Show()
+;         EndIf
+;     EndIf
+; EndFunction
 
 ;Add an actor as a Merchant from dialogue
 Function AddMerchant(Actor akMerchant)
     Logger(logType = 3)
     Logger("In AddMerchant (from dialogue) with: " + akMerchant.GetBaseObject().GetName(), true, 2)
-    If (hiredActors.Find(akMerchant) < 0 && NextOpenAlias > -1)
-        DoAddMerchant(akMerchant)        
-    Else
-        NextOpenAlias = hiredActors.Find(NONE)
-        if NextOpenAlias > -1
-            DoAddMerchant(akMerchant)
-        endIf
-        FixedProperties.FullMerchantListMessage.Show()
+    If (IsValidMerchantType(akMerchant))
+        If (hiredActors.Find(akMerchant) < 0 && NextOpenAlias > -1)
+            DoAddMerchant(akMerchant)        
+        Else
+            NextOpenAlias = hiredActors.Find(NONE)
+            if NextOpenAlias > -1
+                DoAddMerchant(akMerchant)
+            endIf
+            FixedProperties.FullMerchantListMessage.Show()
+        EndIf
     EndIf
 EndFunction
 
@@ -269,7 +271,9 @@ Function YHShowBarterMenu(Actor akSpeaker)
             Logger("ProxyActor name: " + merchant.ProxyActor.GetBaseObject().GetName())
             Logger("Faction Chest name: " + merchant.MerchantChestScript.GetDisplayName())
             Logger("The actor that was made [" +  merchant.ProxyActor.GetBaseObject().GetName() + "] has " +  merchant.ProxyActor.GetNumItems() + " items: " +  merchant.ProxyActor.GetContainerForms())
-
+            int junkPrice = PlayerScript.GetSellCostOfJunk(akSpeaker.GetActorBase().GetSex() != FixedProperties.PlayerRef.GetActorBase().GetSex())
+            Logger("Adding " + junkPrice + " to the player")
+            FixedProperties.PlayerRef.additem(FixedProperties.gold, junkPrice)
             merchant.ProxyActor.ShowBarterMenu()
         EndIf
     Else

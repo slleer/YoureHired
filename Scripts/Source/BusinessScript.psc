@@ -1,4 +1,4 @@
-Scriptname BusinessScript extends ReferenceAlias  
+Scriptname BusinessScript extends ReferenceAlias
 {This manages actors after they've been added to You're Hired Merchant factions.}
 
 Faction property YoureHiredFaction auto
@@ -16,8 +16,8 @@ string _currentChestType
 bool isVanillaMerchant = false
 ObjectReference invMerchantStandOwned
 
-int proxyOutfitId = 0x00103AF2
-int proxyKeepid01 = 0x0003C9FE
+int jobMerchantFactionRank = 0
+
 string blacksmithChestText = "Blacksmith"
 string potionsChestText = "Apothecary"
 string magicChestText = "Magic"
@@ -183,10 +183,18 @@ bool Function FillAliasWithActor(Actor akMerchant)
             invMerchantStandOwned.SetDisplayName(_actorName + "'s Merchant Stall")
             (invMerchantStandOwned as InventortyItemScript).SetOwningMerchant(self)
             ProxyActor.AddItem(invMerchantStandOwned,1,true)
+        else
+            invMerchantStandOwned.SetDisplayName(_actorName + "'s Merchant Stall")
         EndIf
         if akMerchant.IsChild()
             (invMerchantStandOwned as InventortyItemScript).SetIsChild(true)
         endIf
+        if akMerchant.IsInFaction(FixedProperties.JobMerchantFaction)
+            jobMerchantFactionRank = akMerchant.GetFactionRank(FixedProperties.JobMerchantFaction)
+            isVanillaMerchant = true
+            akMerchant.RemoveFromFaction(FixedProperties.JobMerchantFaction)
+        endIf
+
     endIf
     return success
 EndFunction
@@ -198,6 +206,11 @@ Function ClearActorFromAlias()
     SendStallSelfDestruct()
     PromoteToFence(true)
     ClearJobTypeFactions()
+    if isVanillaMerchant
+        GetActorReference().AddToFaction(FixedProperties.JobMerchantFaction)    
+        GetActorReference().SetFactionRank(FixedProperties.JobMerchantFaction, jobMerchantFactionRank)
+        isVanillaMerchant = false
+    endIf
     self.Clear()
 EndFunction
 ;creates an instance of the proxy actor and names it after the new merchant
@@ -259,13 +272,26 @@ ObjectReference Function GetMerchnatStandInventoryItem()
 EndFunction
 
 Function SendStallSelfDestruct()
-    int handle = ModEvent.Create("aaslrYH_StandSelfDestruct")
-    if handle
-        ModEvent.PushForm(handle, YoureHiredFaction)
-        ModEvent.Send(handle)
+    If invMerchantStandOwned
+        invMerchantStandOwned.SetDisplayName("Merchant Stall")
+        return
+    EndIf
+    if !invMerchantStandOwned
+        int handle = ModEvent.Create("aaslrYH_StandSelfDestruct")
+        if handle
+            ModEvent.PushForm(handle, YoureHiredFaction)
+            ModEvent.Send(handle)
+        endIf
     endIf
 EndFunction
 
+Function ClearInventoryMerchantStall()
+    invMerchantStandOwned = NONE
+EndFunction
+
+Function SetInventoryMerchantStall(ObjectReference newStall)
+    invMerchantStandOwned = newStall
+EndFunction
 
 ; Sets faction to accept stolen goods or not
 Function PromoteToFence(bool setDefault = false)

@@ -3,6 +3,11 @@ Scriptname PlayerRefScript extends ReferenceAlias
 
 QuestMaintenanceScript property QuestScript auto
 FormList property JunkFilterFormList auto
+Perk property Haggling auto
+Perk property Allure auto
+float hagglingVal = 0.0
+float allureVal = 0.0
+int hagglingRank = 0
 int[] count
 Form[] junk
 int[] baseValue
@@ -10,11 +15,33 @@ int[] baseValue
 Event OnInit()
     AddInventoryEventFilter(JunkFilterFormList)
     RegisterForModEvent("aaslrYH_JunkFilterEvent", "OnJunkFilterChange")
+    RegisterForSingleUpdate(120.0)
 EndEvent
 
 Event OnPlayerLoadGame()
     RegisterForModEvent("aaslrYH_JunkFilterEvent", "OnJunkFilterChange")
     QuestScript.Maintenance()
+EndEvent
+
+Event OnUpdate()
+    If (allureVal == 0.0 && GetActorReference().HasPerk(Allure))
+        allureVal = 0.1
+    EndIf
+    if (hagglingRank < 5 && GetActorReference().HasPerk(Haggling))
+        hagglingRank += 1
+        if hagglingRank < 5
+            Haggling = Haggling.GetNextPerk()
+        endIf
+        if hagglingRank == 1
+            hagglingVal = 0.1
+        Else
+            hagglingVal += 0.05
+        endIf
+    endIf
+    Logger("allureVal: " + allureVal + ", " + hagglingVal + ", haggling rank " + hagglingRank)
+    if allureVal == 0.0 || hagglingRank < 5
+        RegisterForSingleUpdate(120.0)
+    endIf
 EndEvent
 
 Event OnJunkFilterChange()
@@ -68,4 +95,33 @@ Function Logger(string textToLog = "", bool logFlag = true, int logType = 1)
     If logType == 3
         YHUtil.AddLineBreakGameTimeOptional(logFlag)
     EndIf
+EndFunction
+
+
+int Function GetSellCostOfJunk(bool hasAllure)
+    Logger("Getting some values and returning a number")
+    ActorValueInfo speechcraftMODAVID = ActorValueInfo.GetActorValueInfoById(107)
+    Float speechValue = GetActorReference().GetActorValue("Speechcraft")
+    Logger("speachMODAVI: " + speechcraftMODAVID.GetCurrentValue(GetActorReference()) + ", speechValue: " + speechValue)
+    int index = junk.length
+    float sum = 0
+    int mult = 0
+    float allureProxy 
+    if hasAllure
+        allureProxy = allureVal
+    else
+        allureProxy = 0.0
+    endIf
+    float sellFactor =  (3.3 - 1.3 * speechValue/100) / ((1 + hagglingVal) * (1 + allureProxy) * (1 + speechcraftMODAVID.GetCurrentValue(GetActorReference())/100))
+    while index 
+        index -= 1
+        int thisMany = count[index]
+        mult = thisMany * baseValue[index]
+        Logger("Sell Factor: " + sellFactor)
+        sum += (mult / sellFactor)
+        Logger("count (" + thisMany + ") x base (" + baseValue[index] + ") = " + mult)
+        Form thisJunk = junk[index]
+        GetActorReference().RemoveItem(thisJunk, thisMany)
+    endWhile
+    return Math.Ceiling(sum) 
 EndFunction

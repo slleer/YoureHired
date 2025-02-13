@@ -55,7 +55,7 @@ Function RIGHT(YoureHiredMCM mcm) global
     ; mcm.AddEmptyOption()
     mcm.oid_Settings_FenceEnabled = mcm.AddToggleOption("Make Fence", mcm.S_fenceEnabled)
     mcm.oid_Settings_RecruitmentEnabled = mcm.AddToggleOption("Add Merchant", mcm.S_recruitmentEnabled)
-    mcm.oid_Settings_RepeatEnabled = mcm.AddToggleOption("Same Merchant Type", mcm.S_repeatEnabled)
+    ; mcm.oid_Settings_RepeatEnabled = mcm.AddToggleOption("Same Merchant Type", mcm.S_repeatEnabled)
     mcm.oid_Settings_ResetVanillaEnabled = mcm.AddToggleOption("Reset Non Managed Merchants", mcm.S_resetVanillaEnabled)
 EndFunction
 

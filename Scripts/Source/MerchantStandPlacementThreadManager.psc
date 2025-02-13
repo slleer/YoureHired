@@ -1,0 +1,14 @@
+Scriptname MerchantStandPlacementThreadManager extends Quest  
+
+Quest property YoureHired auto
+Activator property StallFutureActivator auto
+ObjectReference property StallPlacementAnchor auto
+Static property XMarker auto
+
+MerchantStandPlacementThread01 property thread01 auto
+MerchantStandPlacementThread03 property thread03 auto
+MerchantStandPlacementThread04 property thread04 auto
+MerchantStandPlacementThread05 property thread05 auto
+MerchantStandPlacementThread06 property thread06 auto
+MerchantStandPlacementThread07 property thread07 auto
+

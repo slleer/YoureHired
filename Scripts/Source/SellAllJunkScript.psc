@@ -7,6 +7,7 @@ bool changeDetected = false
 Event OnActivate(ObjectReference akActionRef)
     if akActionRef == (YoureHired as YoureHiredMerchantPropertiesScript).PlayerRef
         Logger("We are in the OnActivate event")
+        RegisterForMenu("ContainerMenu")
     endif
 EndEvent
 
@@ -14,14 +15,18 @@ Event OnItemAdded(Form akBaseItem, int aiItemCount, ObjectReference akItemRefere
     if !changeDetected
         changeDetected = true
     endIf
-    ; update to add items to formlist
+    JunkFilterFormList.AddForm(akBaseItem)
+    Logger(akBaseItem.GetName() + " was added!")
 EndEvent
 
 Event OnItemRemoved(Form akBaseItem, int aiItemCount, ObjectReference akItemReference, ObjectReference akDestContainer)
     if !changeDetected
         changeDetected = true
     endIf
-    ; update to remove items from formlist
+    if JunkFilterFormList.HasForm(akBaseItem)
+        JunkFilterFormList.RemoveAddedForm(akBaseItem)
+        Logger(akBaseItem.GetName() + " was removed!")
+    endIf
 EndEvent
 
 
@@ -37,10 +42,10 @@ Function Logger(string textToLog = "", bool logFlag = true, int logType = 1)
     EndIf
 EndFunction
 
-Event OnClose(ObjectReference akActionRef)
+Event OnMenuClose(string menu)
     Logger("We are in the OnClose event")
-    if akActionRef == (YoureHired as YoureHiredMerchantPropertiesScript).PlayerRef
-        ;("aaslrYH_JunkFilterEvent", "OnJunkFilterChange")
+    UnRegisterForMenu("ContainerMenu")
+    if menu == "ContainerMenu"
         if changeDetected
             int handle = ModEvent.Create("aaslrYH_JunkFilterEvent")
             if handle
