@@ -15,7 +15,18 @@ Event OnItemAdded(Form akBaseItem, int aiItemCount, ObjectReference akItemRefere
     if !changeDetected
         changeDetected = true
     endIf
+    if JunkFilterFormList.Find(akBaseItem) > -1
+        GoToState("DuplicateItem")
+        RemoveItem(akBaseItem, aiItemCount, true, akSourceContainer)
+        GoToState("")
+        return
+    endIf
     JunkFilterFormList.AddForm(akBaseItem)
+    if aiItemCount > 1
+        GoToState("DuplicateItem")
+        RemoveItem(akBaseItem, (aiItemCount - 1), true, akSourceContainer)
+        GoToState("")
+    endIf
     Logger(akBaseItem.GetName() + " was added!")
 EndEvent
 
@@ -23,11 +34,17 @@ Event OnItemRemoved(Form akBaseItem, int aiItemCount, ObjectReference akItemRefe
     if !changeDetected
         changeDetected = true
     endIf
+
     if JunkFilterFormList.HasForm(akBaseItem)
         JunkFilterFormList.RemoveAddedForm(akBaseItem)
         Logger(akBaseItem.GetName() + " was removed!")
     endIf
 EndEvent
+
+State DuplicateItem
+    Event OnItemRemoved(Form akBaseItem, int aiItemCount, ObjectReference akItemReference, ObjectReference akDestContainer)
+    EndEvent
+EndState
 
 
 Function Logger(string textToLog = "", bool logFlag = true, int logType = 1)

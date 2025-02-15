@@ -6,8 +6,10 @@ YoureHiredMerchantPropertiesScript property FixedProperties auto
 ActorBase property  ProxyBase_Male auto
 ActorBase property ProxyBase_Female auto
 ActorBase property ProxyBase_Animal auto
-Actor property ProxyActor auto
 ObjectReference property ChestXMarker auto
+ObjectReference property MapMarker auto
+
+Actor property ProxyActor auto
 YoureHiredMerchantChestScript property MerchantChestScript auto
 
 
@@ -129,6 +131,7 @@ State DisposeChestState
         if oldChestType != chestType
             ObjectReference newContainerRef = ChestXMarker.PlaceAtMe(newContainer, abForcePersist = true)
             Logger("newContainerRef: " + newContainerRef)
+            MerchantChestScript.StopListeningAll()
             MerchantChestScript = (newContainerRef as YoureHiredMerchantChestScript)
             _currentChestType = chestType
             MerchantChestScript.ProxyActor = ProxyActor
@@ -165,6 +168,7 @@ EndFunction
 Function ResetFactionContainer()
     ObjectReference oldContainer = YoureHiredFaction.GetMerchantContainer()
     YoureHiredFaction.SetMerchantContainer(FixedProperties.BlankChestRef)
+    MerchantChestScript.StopListeningAll()
     MerchantChestScript = NONE
     _currentChestType = ""
     oldContainer.DisableNoWait()
@@ -181,14 +185,13 @@ bool Function FillAliasWithActor(Actor akMerchant)
         If !invMerchantStandOwned
             invMerchantStandOwned = FixedProperties.GetInventoryStand()
             invMerchantStandOwned.SetDisplayName(_actorName + "'s Merchant Stall")
-            (invMerchantStandOwned as InventortyItemScript).SetOwningMerchant(self)
+            (invMerchantStandOwned as InvItemScript).SetOwningMerchant(self)
             ProxyActor.AddItem(invMerchantStandOwned,1,true)
         else
             invMerchantStandOwned.SetDisplayName(_actorName + "'s Merchant Stall")
         EndIf
-        if akMerchant.IsChild()
-            (invMerchantStandOwned as InventortyItemScript).SetIsChild(true)
-        endIf
+        ; (invMerchantStandOwned as InvItemScript)).SetIsChild(akMerchant.IsChild())
+
         if akMerchant.IsInFaction(FixedProperties.JobMerchantFaction)
             jobMerchantFactionRank = akMerchant.GetFactionRank(FixedProperties.JobMerchantFaction)
             isVanillaMerchant = true
@@ -225,6 +228,7 @@ Function FillProxy(Actor proxy)
         ProxyActor = ChestXMarker.PlaceAtMe(ProxyBase_Animal, abForcePersist = true) as Actor
     EndIf
     ProxyActor.SetRace(proxy.GetRace())
+    ProxyActor.EnableAI(false)
     Logger("Placed and moved the proxy actor")
     Faction[] proxyFactions = proxy.GetFactions(-120,120)
     int index = 0
@@ -274,10 +278,12 @@ EndFunction
 Function SendStallSelfDestruct()
     If invMerchantStandOwned
         invMerchantStandOwned.SetDisplayName("Merchant Stall")
+        (invMerchantStandOwned as InvItemScript).ClearOwningMerchant()
+        invMerchantStandOwned = NONE
         return
     EndIf
-    if !invMerchantStandOwned
-        int handle = ModEvent.Create("aaslrYH_StandSelfDestruct")
+    if FixedProperties.IsDestroyOnRemoval()
+        int handle = ModEvent.Create("aaslrYH_StallSelfDestruct")
         if handle
             ModEvent.PushForm(handle, YoureHiredFaction)
             ModEvent.Send(handle)
@@ -291,6 +297,7 @@ EndFunction
 
 Function SetInventoryMerchantStall(ObjectReference newStall)
     invMerchantStandOwned = newStall
+    invMerchantStandOwned.SetDisplayName(_actorName + "'s Merchant Stall")
 EndFunction
 
 ; Sets faction to accept stolen goods or not

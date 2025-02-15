@@ -7,14 +7,9 @@ ObjectReference property BlankChestRef auto
 MerchantScript property MerchantManager auto
 YoureHiredVanillaManagerScript property YHVanillaManagerScript auto
 
-ObjectReference property MerchantStand auto
 ObjectReference property InvMerchantStand auto
-ObjectReference property CounterLeanIdleRef auto
 ObjectReference[] property ActivatorsCurrent auto
-ObjectReference property xmarker auto
-Furniture property StallIdleFurniture auto
-Static property MarketStallStaic auto
-Activator property StallManagementActivator auto
+MiscObject property gold auto
 
 GlobalVariable property aaslrNumberOfMerchants auto
 GlobalVariable property aaslrMaxNumberMerchants auto
@@ -25,7 +20,6 @@ GlobalVariable property aaslrFenceWantedFlag auto
 GlobalVariable property aaslrNowHiringFlagGlobal auto
 GlobalVariable property aaslrRepeatCustomerFlagGlobal auto
 GlobalVariable property aaslrBonusStockGlobal auto
-GlobalVariable property aaslrResetAllActorsChestsFlagGlobal auto
 GlobalVariable property aaslrMaxGoldValueGlobal auto
 GlobalVariable[] property BonusMerchantGoldGlobals auto
 GlobalVariable[] property Merchant_PackageEnable auto
@@ -39,15 +33,12 @@ Message property FailedAddMerchantMessage auto
 Message property FullMerchantListMessage auto
 Message property RemovedAllMerchantsMessage auto
 
-string[] property ChestTypeText auto
-string[] property VoiceTypeText auto
 FormList property JobTypesFactionList auto
 FormList property MerchantChestList auto
 
 ;Used for identifing actors to add job type factions to
 FormList property aaslrYoureHiredVoiceTypeJobFactionsFormList auto
 FormList property aaslrVoicesNPCsNOCHILD auto
-FormList property aaslrVoicesNPCsCHILD auto
 FormList property aaslrAnimalVoiceTypes auto
 FormList property aaslrVoicesApothecary auto
 FormList property aaslrVoicesBlacksmith auto
@@ -58,10 +49,7 @@ FormList property aaslrVoicesMisc auto
 FormList property aaslrVoicesMagic auto
 FormList property aaslrVoicesTailor auto
 
-bool property ShowDropMessage = true auto
 bool property IsManagedMerchantTrading auto
-bool property AtLeastOneMerchant auto
-bool property MerchantsAreFull auto 
 bool property LowCountReset auto
 bool property RequireTwoKeys = true auto
 bool property EnableHotKeyUse auto
@@ -69,23 +57,24 @@ bool property ResetOnMenuClose auto
 float property DaysBeforeReset = 2.0 auto
 int property Hotkey auto
 int property SecondaryHotkey auto
-int property UpdateNeeded auto
-int property NeedToUpdateMerchantChests auto
-int property ToggleBetweenMenuOrGametimeReset auto
 
-MiscObject property gold auto
+string[] ChestTypeText
+string[] VoiceTypeText
+bool AtLeastOneMerchant
+bool showDropMessage = true
+bool MerchantsAreFull
+bool DestroyOnRemoval = true
+int NeedToUpdateMerchantChests
+int ToggleBetweenMenuOrGametimeReset
 
 int MerchantChestListSize
 int NumMerchants
-bool ListeningForModEvent = false
 
 int _extraGoldAmount
 int property ExtraGoldAmount
     Function Set(int extra)
         _extraGoldAmount = extra
-        if extra > 0
-            extra /= 1000
-        endIf
+        extra /= 1000
         extra -= 1
         int index = 0
         while index < BonusMerchantGoldGlobals.Length
@@ -134,6 +123,7 @@ EndProperty
 
 Event OnInit()
     Logger("In the OnInit", logType = 2)
+    ActivatorsCurrent = new ObjectReference[12]
     MerchantChestListSize = MerchantChestList.GetSize()
     MaxGoldValue = aaslrMaxGoldValueGlobal.GetValue()
     NumMerchants = 0
@@ -149,26 +139,19 @@ Event OnInit()
         EndIf
         VoiceTypeText[numVoiceFactions] = aaslrYoureHiredVoiceTypeJobFactionsFormList.GetAt(numVoiceFactions).GetName()
     endWhile
-    ListenForModEvent(true)
 EndEvent
 
-Function AddActivatorToList(ObjectReference thisActivator)
-    int index = ActivatorsCurrent.Find(NONE)
+Function AddActivatorToList(ObjectReference thisActivator, BusinessScript owningMerchant)
+    int index = MerchantManager.GetMerchantAliasIndex(owningMerchant)
     if index > -1
+        If (ActivatorsCurrent[index])
+            if ActivatorsCurrent[index] != thisActivator
+                (ActivatorsCurrent[index] as MerchantStallActivationScript).DestroyThisMerchantStand()
+            endIf
+        EndIf
         ActivatorsCurrent[index] = thisActivator
     else
         Logger("No empty spaces found when trying to put activator into array.")
-    ;     index = ActivatorsCurrent.Find(thisActivator)
-    ;     If index < 0
-    ;         index = ActivatorsCurrent.Length
-    ;         while index
-    ;             index -= 1
-    ;             if (ActivatorsCurrent[index] as MerchantStallActivationScript).GetOwningMerchant() == (thisActivator as MerchantStallActivationScript).GetOwningMerchant()
-                    
-    ;             endIf
-    ;         endWhile
-            
-    ;     EndIf
     endIf
 EndFunction
 
@@ -179,15 +162,12 @@ Function RemoveActivatorFromList(ObjectReference thisActivator)
     endIf
 EndFunction
 
-Event PlaceMerchantStand(string eventName, string strArg, float numArg, Form sender)
-    Logger("We are in the custom event: " + eventName + ", strArg: " + strArg + ", numArg: " + numArg + ", Sender: " + sender)
-EndEvent
+bool Function HasAtLeastOneMerchant()
+    return AtLeastOneMerchant
+EndFunction
 
 ObjectReference Function GetInventoryStand()
     return InvMerchantStand.PlaceAtMe(InvMerchantStand.GetBaseObject(), 1, true, false)
-    ; ObjectReference temp = InvMerchantStand
-    ; InvMerchantStand = temp.PlaceAtMe(temp.GetBaseObject(), 1, true, false)
-    ; return temp
 EndFunction
 
 Function SendListeningCommands()
@@ -200,18 +180,24 @@ Function SendListeningCommands()
     endWhile
 EndFunction
 
-Function ListenForModEvent(bool listen)
-    If (ListeningForModEvent == listen)
-        return
-    EndIf
-    If (ListeningForModEvent)
-        UnregisterForModEvent("aaslrYH_PlaceMerchantStand")
-        ListeningForModEvent = listen
-        return
-    EndIf
-    Logger("We are now listening")
-    RegisterForModEvent("aaslrYH_PlaceMerchantStand", "PlaceMerchantStand")
-    ListeningForModEvent = listen
+string[] Function GetChestTypeText()
+    return ChestTypeText
+EndFunction
+
+Function SetShowDropMessage(bool show)
+    showDropMessage = show
+EndFunction
+
+bool Function GetShowDropMessage()
+    return showDropMessage
+EndFunction
+
+bool Function IsDestroyOnRemoval()
+    return DestroyOnRemoval
+EndFunction
+
+Function SetDestroyOnRemoval(bool destroy)
+    DestroyOnRemoval = destroy
 EndFunction
 
 Function Logger(string textToLog = "", bool logFlag = true, int logType = 1)
@@ -238,22 +224,20 @@ int Function GetNumMerchantsGlobal()
     return NumMerchants
 EndFunction
 
-Function SetUpdateNeeded()
-    Logger("UpdateNeeded before: " + UpdateNeeded)
-    UpdateNeeded += 1
-    Logger("UpdateNeeded After: " + UpdateNeeded)
+Function SetToggleBetweenMenuOrGametimeReset(int reset = 1)
+    ToggleBetweenMenuOrGametimeReset = reset
 EndFunction
 
-Function SetToggleBetweenMenuOrGametimeReset()
-    Logger("Toggle between menu or gametime, Before inc: " + ToggleBetweenMenuOrGametimeReset)
-    ToggleBetweenMenuOrGametimeReset += 1
-    Logger("Toggle between menu or gametime, After inc: " + ToggleBetweenMenuOrGametimeReset)
+int Function GetToggleBetweenMenuOrGametimeReset()
+    return ToggleBetweenMenuOrGametimeReset
 EndFunction
 
-Function SetNeedToUpdateMerchantChests()
-    Logger("Need to update merchant chests Before increment: " + NeedToUpdateMerchantChests)
-    NeedToUpdateMerchantChests += 1
-    Logger("Need to update merchant chests After increment: " + NeedToUpdateMerchantChests)
+Function SetNeedToUpdateMerchantChests(int reset = 1)
+    NeedToUpdateMerchantChests = reset
+EndFunction
+
+int Function GetNeedToUpdateMerchantChests()
+    return NeedToUpdateMerchantChests
 EndFunction
 
 Function SetNumMerchantsGlobal(float numDiff)

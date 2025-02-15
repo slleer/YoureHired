@@ -31,35 +31,58 @@ Event OnInit()
         index += 1
     EndWhile
     NextOpenAlias = 0
-    RegisterForMenu("Journal Menu")
+    ; RegisterForMenu("Journal Menu")
 EndEvent
 
-Event OnMenuClose(string openMenu)
-    Logger("The menu that was closed is: " + openMenu)
-    if openMenu == "Journal Menu"
-        If FixedProperties.UpdateNeeded > 0
-            int index = 0
-            Logger("Need to update")
-            Actor thisMerchant
-            While index < FixedProperties.aaslrMaxNumberMerchants.GetValueInt()
-                thisMerchant = hiredActors[index]
-                Logger("This merchant" + thisMerchant)
-                if thisMerchant
-                    If FixedProperties.ToggleBetweenMenuOrGametimeReset > 0
-                        merchantAliases[index].MerchantChestScript.ToggleOnMenuCloseOrGametime()
-                    EndIf
-                    If FixedProperties.NeedToUpdateMerchantChests > 0
-                        merchantAliases[index].MerchantChestScript.ResetChest(false)
-                    EndIf
-                endIf
-                index += 1
-            EndWhile
-            FixedProperties.UpdateNeeded = 0
-            FixedProperties.ToggleBetweenMenuOrGametimeReset = 0
-            FixedProperties.NeedToUpdateMerchantChests = 0
-        EndIf
-        Logger("End of OnMenuClose")
-    endIf
+; Event OnMenuClose(string openMenu)
+;     Logger("The menu that was closed is: " + openMenu)
+;     if openMenu == "Journal Menu"
+;         If FixedProperties.UpdateNeeded > 0
+;             int index = 0
+;             Logger("Need to update")
+;             Actor thisMerchant
+;             While index < FixedProperties.aaslrMaxNumberMerchants.GetValueInt()
+;                 thisMerchant = hiredActors[index]
+;                 Logger("This merchant" + thisMerchant)
+;                 if thisMerchant
+;                     If FixedProperties.ToggleBetweenMenuOrGametimeReset > 0
+;                         merchantAliases[index].MerchantChestScript.ToggleOnMenuCloseOrGametime()
+;                     EndIf
+;                     If FixedProperties.NeedToUpdateMerchantChests > 0
+;                         merchantAliases[index].MerchantChestScript.ResetChest(false)
+;                     EndIf
+;                 endIf
+;                 index += 1
+;             EndWhile
+;             FixedProperties.UpdateNeeded = 0
+;             FixedProperties.ToggleBetweenMenuOrGametimeReset = 0
+;             FixedProperties.NeedToUpdateMerchantChests = 0
+;         EndIf
+;         Logger("End of OnMenuClose")
+;     endIf
+; EndEvent
+
+Event OnUpdate()
+    Logger(" We are in the update event!!!")
+    int index = 0
+    Logger("Need to update")
+    Actor thisMerchant
+    While index < FixedProperties.aaslrMaxNumberMerchants.GetValueInt()
+        thisMerchant = hiredActors[index]
+        Logger("This merchant" + thisMerchant)
+        if thisMerchant
+            If FixedProperties.GetToggleBetweenMenuOrGametimeReset() > 0
+                merchantAliases[index].MerchantChestScript.ToggleOnMenuCloseOrGametime()
+            EndIf
+            If FixedProperties.GetNeedToUpdateMerchantChests() > 0
+                merchantAliases[index].MerchantChestScript.ResetChest(false)
+            EndIf
+        endIf
+        index += 1
+    EndWhile
+    FixedProperties.SetToggleBetweenMenuOrGametimeReset(0)
+    FixedProperties.SetNeedToUpdateMerchantChests(0)
+    isWaiting = false
 EndEvent
 
 Function Logger(string textToLog = "", bool logFlag = true, int logType = 1)
@@ -144,14 +167,16 @@ Function AddMerchant(Actor akMerchant)
     Logger(logType = 3)
     Logger("In AddMerchant (from dialogue) with: " + akMerchant.GetBaseObject().GetName(), true, 2)
     If (IsValidMerchantType(akMerchant))
-        If (hiredActors.Find(akMerchant) < 0 && NextOpenAlias > -1)
-            DoAddMerchant(akMerchant)        
-        Else
-            NextOpenAlias = hiredActors.Find(NONE)
+        If hiredActors.Find(akMerchant) < 0
             if NextOpenAlias > -1
-                DoAddMerchant(akMerchant)
-            endIf
-            FixedProperties.FullMerchantListMessage.Show()
+                DoAddMerchant(akMerchant)       
+            Else
+                NextOpenAlias = hiredActors.Find(NONE)
+                if NextOpenAlias > -1
+                    DoAddMerchant(akMerchant)
+                endIf
+                FixedProperties.FullMerchantListMessage.Show()
+            endIf 
         EndIf
     EndIf
 EndFunction
@@ -201,8 +226,8 @@ Function RemoveThisMerchant(BusinessScript thisMerchant)
     Logger("The index for this merchant is " + LastFoundMerchant + " and the merchant name from that index is: " + hiredActors[LastFoundMerchant].GetName())
     FixedProperties.SetNumMerchantsGlobal(-1.0)
     myQuest.UpdateCurrentInstanceGlobal(FixedProperties.aaslrNumberOfMerchants)
-    (FixedProperties.RemovedMerchantMessageFormList.GetAt(LastFoundMerchant) as Message).Show()
     thisMerchant.ClearActorFromAlias()
+    (FixedProperties.RemovedMerchantMessageFormList.GetAt(LastFoundMerchant) as Message).Show()
     hiredActors[LastFoundMerchant] = NONE
     NextOpenAlias = LastFoundMerchant
     Logger("Removed this merchant")
@@ -263,21 +288,25 @@ Function YHShowBarterMenu(Actor akSpeaker)
         int index = hiredActors.Find(akSpeaker)
         BusinessScript merchant = merchantAliases[index]
         If (merchant)
-            FixedProperties.IsManagedMerchantTrading = true
             If (FixedProperties.EnableHotKeyUse)
+                FixedProperties.IsManagedMerchantTrading = true
                 merchant.MerchantChestScript.ListenForHotKeys()
             EndIf
             Logger("BarterMenu actor found: "+ merchant.GetActorName())
-            Logger("ProxyActor name: " + merchant.ProxyActor.GetBaseObject().GetName())
-            Logger("Faction Chest name: " + merchant.MerchantChestScript.GetDisplayName())
-            Logger("The actor that was made [" +  merchant.ProxyActor.GetBaseObject().GetName() + "] has " +  merchant.ProxyActor.GetNumItems() + " items: " +  merchant.ProxyActor.GetContainerForms())
-            int junkPrice = PlayerScript.GetSellCostOfJunk(akSpeaker.GetActorBase().GetSex() != FixedProperties.PlayerRef.GetActorBase().GetSex())
-            Logger("Adding " + junkPrice + " to the player")
-            FixedProperties.PlayerRef.additem(FixedProperties.gold, junkPrice)
             merchant.ProxyActor.ShowBarterMenu()
         EndIf
     Else
         akSpeaker.ShowBarterMenu()
+    EndIf
+EndFunction
+
+Function SellJunk(Actor akMerchant)
+    If (hiredActors.Find(akMerchant) > -1)
+        Logger("Selling Junk")
+        int index = hiredActors.Find(akMerchant)
+        int junkPrice = PlayerScript.GetSellCostOfJunk(akMerchant.GetActorBase().GetSex() != PlayerScript.GetActorReference().GetActorBase().GetSex(), merchantAliases[index].MerchantChestScript)
+        Logger("Adding " + junkPrice + " to the player")
+        PlayerScript.GetActorReference().additem(FixedProperties.gold, junkPrice)
     EndIf
 EndFunction
 
@@ -305,6 +334,16 @@ BusinessScript Function GetMerchant(Actor akMerchant)
         index += 1
     EndWhile
     return none
+EndFunction
+
+bool isWaiting = false
+Function UpdateResetCondtions()
+    If (!isWaiting)
+        isWaiting = true
+        Utility.wait(0.1)
+        Logger("We just waited for the menu to close to reset all the things")
+        RegisterForSingleUpdate(0.1)
+    EndIf
 EndFunction
 
 bool Function IsManagedMerchant(Actor akMerchant)

@@ -54,6 +54,7 @@ Event OnJunkFilterChange()
         count = Utility.ResizeIntArray(count, numItems, 0)
         baseValue = Utility.ResizeIntArray(baseValue, numItems, 0)
     endIf
+    
     while numItems
         numItems -= 1
         count[numItems] = GetActorReference().GetItemCount(junk[numItems])
@@ -84,6 +85,16 @@ Event OnItemRemoved(Form akBaseItem, int aiItemCount, ObjectReference akItemRefe
     endIf   
 EndEvent
 
+State BusyState
+    Event OnItemAdded(Form akBaseItem, int aiItemCount, ObjectReference akItemReference, ObjectReference akSourceContainer)
+        Logger("Item added busy state")
+    EndEvent
+    
+    Event OnItemRemoved(Form akBaseItem, int aiItemCount, ObjectReference akItemReference, ObjectReference akDestContainer)
+        Logger("Item removed busy state")
+    EndEvent
+EndState
+
 
 Function Logger(string textToLog = "", bool logFlag = true, int logType = 1)
     if logType == 1
@@ -98,12 +109,16 @@ Function Logger(string textToLog = "", bool logFlag = true, int logType = 1)
 EndFunction
 
 
-int Function GetSellCostOfJunk(bool hasAllure)
+int Function GetSellCostOfJunk(bool hasAllure, ObjectReference merchantChest)
+    GoToState("BusyState")
     Logger("Getting some values and returning a number")
     ActorValueInfo speechcraftMODAVID = ActorValueInfo.GetActorValueInfoById(107)
     Float speechValue = GetActorReference().GetActorValue("Speechcraft")
-    Logger("speachMODAVI: " + speechcraftMODAVID.GetCurrentValue(GetActorReference()) + ", speechValue: " + speechValue)
+    float speechMODValue = speechcraftMODAVID.GetCurrentValue(GetActorReference())
+    Logger("speachMODAVI: " + speechMODValue + ", speechValue: " + speechValue)
+    
     int index = junk.length
+    Logger("num items being filterd: " + index)
     float sum = 0
     int mult = 0
     float allureProxy 
@@ -112,16 +127,19 @@ int Function GetSellCostOfJunk(bool hasAllure)
     else
         allureProxy = 0.0
     endIf
-    float sellFactor =  (3.3 - 1.3 * speechValue/100) / ((1 + hagglingVal) * (1 + allureProxy) * (1 + speechcraftMODAVID.GetCurrentValue(GetActorReference())/100))
+    float sellFactor =  (3.3 - 1.3 * speechValue/100) / ((1 + hagglingVal) * (1 + allureProxy) * (1 + speechMODValue/100))
     while index 
         index -= 1
         int thisMany = count[index]
+        count[index] = 0
         mult = thisMany * baseValue[index]
         Logger("Sell Factor: " + sellFactor)
         sum += (mult / sellFactor)
         Logger("count (" + thisMany + ") x base (" + baseValue[index] + ") = " + mult)
         Form thisJunk = junk[index]
-        GetActorReference().RemoveItem(thisJunk, thisMany)
+        GetActorReference().RemoveItem(JunkFilterFormList, thisMany, true, merchantChest)
+
     endWhile
+    GoToState("")
     return Math.Ceiling(sum) 
 EndFunction

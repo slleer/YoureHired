@@ -15,5 +15,6 @@ Function Maintenance()
     EndIf
     ; Used for version conrtoll 
     ; (YoureHiredQuest as YoureHiredVanillaManagerScript).ListenForModEvents()
-    
+    (YoureHiredQuest as MerchantStandPlacementThreadManager).ListenForModEvents()
+    (YoureHiredQuest as YoureHiredMerchantPropertiesScript).SendListeningCommands()
 EndFunction 

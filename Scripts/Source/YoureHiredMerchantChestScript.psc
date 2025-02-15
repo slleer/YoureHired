@@ -104,6 +104,12 @@ Function ListenForHotKeys()
     EndIf
 EndFunction 
 
+Function StopListeningAll()
+    UnregisterForAllKeys()
+    UnregisterForAllMenus()
+    UnregisterForUpdateGameTime()
+EndFunction
+
 Function ToggleOnMenuCloseOrGametime()
     if FixedProperties.ResetOnMenuClose
         Logger("ResetOnMenuClose is true!!")

@@ -1,22 +1,36 @@
 Scriptname MerchantStallActivationScript extends ObjectReference  
 
 Quest property YoureHired auto
+Furniture property MerchantStallFurniture auto
+Furniture property ChildMerchantStallFurniture auto
 ObjectReference property JunkContainer auto
+ObjectReference property mapReturnMarker auto
+ObjectReference property WriteLedgerIdle auto
+ObjectReference property BrowseIdle auto
+ObjectReference property SweepIdle auto
+ObjectReference property WipeBrowIdle auto
+ObjectReference property ChildPlayDirtIdle auto
 
+
+MerchantStandPlacementThreadManager threadMgr
 ObjectReference[] property StandObjectRefs auto
 Message property ActivateMessage auto
-BusinessScript owningMerchant
 ObjectReference mapMarker
+BusinessScript owningMerchant
 bool PickUp = false
 int index = 0
+int enableIndex
 
 Event OnInit()
     StandObjectRefs = new ObjectReference[12]
-    (YoureHired as YoureHiredMerchantPropertiesScript).AddActivatorToList(self)
+    threadMgr = (YoureHired as MerchantStandPlacementThreadManager)
     Logger("Registering for self destruct")
-    RegisterForModEvent("aaslrYH_StandSelfDestruct", "OnSelfDestructRequest")
+    RegisterForModEvent("aaslrYH_StallSelfDestruct", "OnSelfDestructRequest")
+    RegisterForModEvent("aaslrYH_CollectStallObjects", "OnStallObjPlacementComplete")
     ; RegisterforCrosshairRef()
 EndEvent
+
+
 
 ; Event OnCrosshairRefChange(ObjectReference ref)
 ;     Logger("Self: " + self + ", ref: " + ref)
@@ -34,11 +48,6 @@ EndEvent
 ; EndEvent
 
 
-Function ListenForModEvents()
-    RegisterForModEvent("aaslrYH_StandSelfDestruct", "OnSelfDestructRequest")
-    ; RegisterforCrosshairRef()
-EndFunction
-
 Event OnSelfDestructRequest(Form sender)
     Logger("We are in the self destruct")
     if (sender as Faction) == owningMerchant.YoureHiredFaction
@@ -48,38 +57,88 @@ Event OnSelfDestructRequest(Form sender)
 EndEvent
 
 bool locked = false
+Event OnStallObjPlacementComplete(Form stallObj)
+    while locked
+        Utility.WaitMenuMode(0.1)
+    EndWhile
+    locked = true
+    
+    if (stallObj as ObjectReference).GetBaseObject() == MerchantStallFurniture || (stallObj as ObjectReference).GetBaseObject() == ChildMerchantStallFurniture
+        enableIndex = index
+    endIf
+    Logger("We recieved: " + stallObj + ", " + index)
+    StandObjectRefs[index] = stallObj as ObjectReference
+    index += 1
+    locked = false
+EndEvent
+
+Event OnUpdate()
+    threadMgr.wait_all()
+    Utility.wait(0.1)
+    Logger("We just waited for all the objs")
+    StandObjectRefs[enableIndex].Enable(false)
+    StandObjectRefs[enableIndex].SetFactionOwner(owningMerchant.YoureHiredFaction)
+    UnregisterForModEvent("aaslrYH_CollectStallObjects")
+EndEvent
+
 Event OnActivate(ObjectReference akActionRef)
+    GoToState("BusyState")
     Logger("In the activate script!!!")
     Logger(" going through the formlist")
-
-    If !locked
-        locked = true
     
-        Logger("we are passed the locked gate")
-        Logger("Form Count: " + index)
-        int choice = ActivateMessage.Show()
-        
-        Logger("choice: " + choice)
-        if choice
-            if choice == 1
-                DisableStallPackage()
-            elseIf choice == 2
-                JunkContainer.Activate(akActionRef)
-            endIf
-            locked = false
-            return
+    Logger("Form Count: " + index)
+    int choice = ActivateMessage.Show()
+    
+    Logger("choice: " + choice)
+    if choice
+        if choice == 1
+            DisableStallPackage()
+        elseIf choice == 2
+            JunkContainer.Activate(akActionRef)
+        elseIf choice == 3
+
         endIf
-        PickUp = true
-        ; PlayerRef.AddItem
-        DestroyThisMerchantStand()
-        
-        PickUp = false
-        locked = false
-    EndIf
+        return
+    endIf
+    PickUp = true
+    ; PlayerRef.AddItem
+    DestroyThisMerchantStand()
     
-    ; USE BELOW FOR CHANGING THE ACTIVATION TEXT DYNAMICALLY 
-
+    PickUp = false
+    
+    GoToState("")
 EndEvent
+
+State BusyState
+    Event OnActivate(ObjectReference akActionRef)
+        Logger("Activated from busy state")
+    EndEvent
+EndState
+
+Function ListenForModEvents()
+    RegisterForModEvent("aaslrYH_StandSelfDestruct", "OnSelfDestructRequest")
+    ; RegisterforCrosshairRef()
+EndFunction
+
+Function PlaceRemainingStallObjects()
+    bool isChild = owningMerchant.GetActorReference().IsChild()
+    Logger("The owning merchant is: " + owningMerchant.GetActorName() + ", they are a child: " + owningMerchant.GetActorReference().IsChild())
+    threadMgr.PlaceStallAsync(self, isChild)
+    ; if isChild
+    ;     threadMgr.PlaceChairAsync()
+    ; endIf
+    threadMgr.PlaceMapMarkerAsync(mapMarker, isChild)
+    threadMgr.PlaceIdleMarkerAsync(WipeBrowIdle, 20.0, 0.0, 0.0, false, false)
+    if isChild
+        threadMgr.PlaceIdleMarkerAsync(ChildPlayDirtIdle, 60.0, 0.0, -30.0, false, true)
+    else
+        threadMgr.PlaceIdleMarkerAsync(WriteLedgerIdle, 60.0, 0.0, -30.0, false, true)
+    endIf
+    threadMgr.PlaceIdleMarkerAsync(SweepIdle, 130.0, -20.0, 120.0, true, false)
+    threadMgr.PlaceIdleMarkerAsync(BrowseIdle, 175.0, 15.0, 190.0, true, false)
+    RegisterForSingleUpdate(0.01)
+EndFunction
+; Function PlaceIdleMarkerAsync(ObjectReference idleMarker, float distance, float angle, float roation, bool useStallWidth, bool invert)
 
 Function DestroyThisMerchantStand()
     DisableStallPackage()
@@ -94,19 +153,23 @@ Function DestroyThisMerchantStand()
         Logger("index: " + index)
     endWhile
     if mapMarker.IsEnabled()
-        mapMarker.Disable()
+        mapMarker.DisableNoWait()
+        mapMarker.MoveTo(mapReturnMarker)
     EndIf
     index = 0
     if PickUp
         Logger(" in pickup")
         ObjectReference invMerchantStandOwned = (YoureHired as YoureHiredMerchantPropertiesScript).GetInventoryStand()
-        (invMerchantStandOwned as InventortyItemScript).SetOwningMerchant(owningMerchant)
-        invMerchantStandOwned.SetDisplayName(owningMerchant.GetActorName() + "'s Merchant Stall")
-        owningMerchant.SetInventoryMerchantStall(invMerchantStandOwned)
+        If (invMerchantStandOwned)
+            (invMerchantStandOwned as InvItemScript).SetOwningMerchant(owningMerchant)
+            invMerchantStandOwned.SetDisplayName(owningMerchant.GetActorName() + "'s Merchant Stall")
+            owningMerchant.SetInventoryMerchantStall(invMerchantStandOwned)
+        EndIf
         (YoureHired as YoureHiredMerchantPropertiesScript).PlayerRef.AddItem(invMerchantStandOwned, 1, true)
     endIf
     (YoureHired as YoureHiredMerchantPropertiesScript).RemoveActivatorFromList(self)
-
+    self.Disable()
+    self.Delete()
 EndFunction
 
 Function DisableStallPackage()
@@ -117,21 +180,26 @@ Function DisableStallPackage()
     Logger("The global is: " + (YoureHired as YoureHiredMerchantPropertiesScript).Merchant_PackageEnable[merchantIndex].GetValueInt())
 EndFunction
 
-Function AddStandObject(ObjectReference thisObject)
-    StandObjectRefs[index] = thisObject
-    index += 1
-EndFunction
-
 Function SetOwningMerchant(BusinessScript merchant)
-    owningMerchant = merchant
+    owningMerchant = merchant 
+    (YoureHired as YoureHiredMerchantPropertiesScript).AddActivatorToList(self, owningMerchant)
+    mapMarker = owningMerchant.MapMarker
 EndFunction
 
 BusinessScript Function GetOwningMerchant()
     return owningMerchant
 EndFunction
 
-Function SetMapMarker(ObjectReference marker)
-    mapMarker = marker
+Function AssignNewOwner(Actor akActionRef)
+    BusinessScript merchant = (YoureHired as YoureHiredMCM).MM_ThisMerchant
+    if merchant && !merchant.GetMerchnatStandInventoryItem()
+        ; int merchantIndex = (YoureHired as MerchantScript).GetMerchantAliasIndex(merchant)
+        (YoureHired as YoureHiredMerchantPropertiesScript).RemoveActivatorFromList(self)
+        SetOwningMerchant(merchant)
+        owningMerchant.SetInventoryMerchantStall(self)
+        ; If (!(YoureHired as YoureHiredMerchantPropertiesScript).ActivatorsCurrent[merchantIndex])
+        ; EndIf
+    endIf
 EndFunction
 
 Function Logger(string textToLog = "", bool logFlag = true, int logType = 1)

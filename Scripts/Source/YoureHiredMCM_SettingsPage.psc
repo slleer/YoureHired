@@ -21,8 +21,7 @@ Function LEFT(YoureHiredMCM mcm) global
     
     mcm.AddEmptyOption()
     
-    mcm.AddHeaderOption("Merchant Options")
-    mcm.oid_Settings_MaxGoldInChest = mcm.AddSliderOption("Merchant Keeps Gold", mcm.S_MaxGoldInChest, "When Above {0}")
+    mcm.AddHeaderOption("Reset Options")
     int flag = mcm.OPTION_FLAG_NONE
     if mcm.S_ResetOnMenuClose
         flag = mcm.OPTION_FLAG_DISABLED
@@ -51,12 +50,20 @@ Function LEFT(YoureHiredMCM mcm) global
 EndFunction
 
 Function RIGHT(YoureHiredMCM mcm) global
-    mcm.AddHeaderOption("Merchant Dialogue")
+    mcm.AddHeaderOption("Dialogue & Messages")
     ; mcm.AddEmptyOption()
     mcm.oid_Settings_FenceEnabled = mcm.AddToggleOption("Make Fence", mcm.S_fenceEnabled)
     mcm.oid_Settings_RecruitmentEnabled = mcm.AddToggleOption("Add Merchant", mcm.S_recruitmentEnabled)
     ; mcm.oid_Settings_RepeatEnabled = mcm.AddToggleOption("Same Merchant Type", mcm.S_repeatEnabled)
     mcm.oid_Settings_ResetVanillaEnabled = mcm.AddToggleOption("Reset Non Managed Merchants", mcm.S_resetVanillaEnabled)
+    mcm.oid_Settings_ShowDropMessage = mcm.AddToggleOption("Show Drop Message", mcm.S_ShowDropMessage)
+    
+    mcm.AddEmptyOption()
+    mcm.AddHeaderOption("General Merchant Settings")
+    mcm.oid_Settings_OverStockedMerchants = mcm.AddToggleOption("Overstocked Merchant Inventory", mcm.S_OverStockedEnabled)
+    mcm.oid_Settings_ExtraStartingGold = mcm.AddSliderOption("Increase Mechant Gold", mcm.S_ExtraStartingGold, "By {0}")
+    mcm.oid_Settings_MaxGoldInChest = mcm.AddSliderOption("Merchant Keeps Gold", mcm.S_MaxGoldInChest, "When Above {0}")
+    mcm.oid_Settings_DestroyOnRemoval = mcm.AddToggleOption("Destroy On Dismiss", mcm.S_DestroyOnRemoval)
 EndFunction
 
 Function OnSelect(YoureHiredMCM mcm, int optionId) global
@@ -73,7 +80,7 @@ Function OnSelect(YoureHiredMCM mcm, int optionId) global
         mcm.S_ResetOnMenuClose = !mcm.S_ResetOnMenuClose
         mcm.FixedProperties.ResetOnMenuClose = mcm.S_ResetOnMenuClose
         mcm.FixedProperties.SetToggleBetweenMenuOrGametimeReset()
-        mcm.FixedProperties.SetUpdateNeeded()
+        mcm.FixedProperties.MerchantManager.UpdateResetCondtions()
         int flag
         If (mcm.S_ResetOnMenuClose)
             flag = mcm.OPTION_FLAG_DISABLED
@@ -139,8 +146,22 @@ Function OnSelect(YoureHiredMCM mcm, int optionId) global
         mcm.S_LowCountReset = !mcm.S_LowCountReset
         mcm.SetToggleOptionValue(optionId, mcm.S_LowCountReset)
         mcm.FixedProperties.LowCountReset = mcm.S_LowCountReset
+    ElseIf (optionId == mcm.oid_Settings_ShowDropMessage)
+        mcm.S_ShowDropMessage = !mcm.S_ShowDropMessage
+        mcm.SetToggleOptionValue(optionId, mcm.S_ShowDropMessage)
+        mcm.FixedProperties.SetShowDropMessage(mcm.S_ShowDropMessage)
+    ElseIf (optionId == mcm.oid_Settings_DestroyOnRemoval)
+        mcm.S_DestroyOnRemoval = !mcm.S_DestroyOnRemoval
+        mcm.SetToggleOptionValue(optionId, mcm.S_DestroyOnRemoval)
+        mcm.FixedProperties.SetDestroyOnRemoval(mcm.S_DestroyOnRemoval)
+    ElseIf (optionId == mcm.oid_Settings_OverStockedMerchants)
+        mcm.S_OverStockedEnabled = !mcm.S_OverStockedEnabled
+        mcm.SetToggleOptionValue(optionId, mcm.S_OverStockedEnabled)
+        mcm.FixedProperties.OverStockedcMerchant = mcm.S_OverStockedEnabled
+        mcm.FixedProperties.SetNeedToUpdateMerchantChests()
+        mcm.FixedProperties.MerchantManager.UpdateResetCondtions()
     EndIf    
-EndFunction
+EndFunction ; OnSelect
 
 Function OnKeyMapChanged(YoureHiredMCM mcm, int optionId, int keyCode, string conflictControl, string conflictName) global
     bool continue = true
@@ -169,7 +190,7 @@ EndFunction
 
 Function OnHighlight(YoureHiredMCM mcm, int optionId) global
     If (optionId == mcm.oid_Settings_FenceEnabled)
-        mcm.SetInfoText("When enabled, this merchant will buy stolen items. [Default off].")
+        mcm.SetInfoText("Adds dialogue to managed merchants to make them into a Fence (will buy stolen items). [Default off].")
     ElseIf (optionId == mcm.oid_Settings_RecruitmentEnabled)
         mcm.SetInfoText("All NPC's that can be a merchant will have the 'Interested in becoming a merchant?' Dialogue option. This is an alternative to using the spell or wearing the Merchant Hat! [Default off]")
     ElseIf (optionId == mcm.oid_Settings_RepeatEnabled)
@@ -180,8 +201,6 @@ Function OnHighlight(YoureHiredMCM mcm, int optionId) global
         mcm.SetInfoText("Allows children to become merchants [Default off]")
     ElseIf (optionId == mcm.oid_SettingS_AllowAnimals)
         mcm.SetInfoText("Allows certain animals to become merchants [Default off] - Supported animal types: dog, goat, horse, fox, mudcrab, skeever, frostbite spider, rabbit, death hound")
-    ElseIf (optionId == mcm.oid_Settings_MaxGoldInChest)
-        mcm.SetInfoText("Any gold above this amount in a managed merchant's inventory will remain when reseting their inventory or changing merchant types. This also allows a merchant's gold to grow beyond 32000 without issue. [Default 6800]")
     ElseIf (optionId == mcm.oid_Settings_EnableHotKeyUse)
         mcm.SetInfoText("Use the registerd hotkey/s to reset a managed merchant's inventory while in the bartering menu. [Default off]")
     ElseIf (optionId == mcm.oid_Settings_RequireTwoKeys)
@@ -208,6 +227,16 @@ Function OnHighlight(YoureHiredMCM mcm, int optionId) global
         mcm.SetInfoText("Enable to have a managed merchant's chest reset after exiting barter menu. Will also disable auto reset every " + mcm.S_NumDaysBetweenReset + " days. [Default off]")
     ElseIf (optionId == mcm.oid_Settings_LowCountReset)
         mcm.SetInfoText("When enabled, mangaged merchant's inventory will reset when they have fewer than 6 items or less than 150 gold. [Default off]")
+    ElseIf (optionId == mcm.oid_Settings_ShowDropMessage)
+        mcm.SetInfoText("When enabled, a warning message will show when trying to drop a merchant's stall from inventory. [Default on]")
+    ElseIf (optionId == mcm.oid_Settings_DestroyOnRemoval)
+        mcm.SetInfoText("When enabled, a merchant's stall will be destroyed when they are dimissed from a merchant slot. [Default on]")
+    ElseIf (optionId == mcm.oid_Settings_OverStockedMerchants)
+        mcm.SetInfoText("Adds a number of items to each managed merchant type [Default off]")
+    ElseIf (optionId == mcm.oid_Settings_ExtraStartingGold)
+        mcm.SetInfoText("Increase this merchants base gold amount by the selected amount. [Default 0]")
+    ElseIf (optionId == mcm.oid_Settings_MaxGoldInChest)
+        mcm.SetInfoText("Any gold above this amount in a managed merchant's inventory will remain when reseting their inventory or changing merchant types. This also allows a merchant's gold to grow beyond 32000 without issue. [Default 6800]")
     EndIf    
     
 EndFunction
@@ -243,10 +272,6 @@ Function OnDefault(YoureHiredMCM mcm, int optionId) global
         mcm.FixedProperties.aaslrallowBeastsFlag.SetValue(2.0)
         mcm.SetToggleOptionValue(mcm.oid_SettingS_AllowAnimals, mcm.S_AllowAnimals)
         Logger("allowAnimalsFlag:" + mcm.FixedProperties.aaslrallowBeastsFlag.GetValue())
-    ElseIf (optionId == mcm.oid_Settings_MaxGoldInChest)
-        mcm.S_MaxGoldInChest = 6800.0
-        mcm.FixedProperties.MaxGoldValue = mcm.S_MaxGoldInChest
-        mcm.SetSliderOptionValue(optionId, mcm.S_MaxGoldInChest, "When Above {0}")
     ElseIf (optionId == mcm.oid_Settings_EnableHotKeyUse)
         mcm.S_EnableHotKeyUse = false
         mcm.SetToggleOptionValue(optionId, mcm.S_EnableHotKeyUse)
@@ -280,38 +305,74 @@ Function OnDefault(YoureHiredMCM mcm, int optionId) global
         mcm.S_ResetOnMenuClose = false
         mcm.FixedProperties.ResetOnMenuClose = false
         mcm.FixedProperties.SetToggleBetweenMenuOrGametimeReset()
-        mcm.FixedProperties.SetUpdateNeeded()
+        ; mcm.FixedProperties.SetUpdateNeeded()
+        mcm.FixedProperties.MerchantManager.UpdateResetCondtions()
         mcm.SetToggleOptionValue(optionId, mcm.S_ResetOnMenuClose)
     ElseIf (optionId == mcm.oid_Settings_LowCountReset)
         mcm.S_LowCountReset = false
         mcm.FixedProperties.LowCountReset = false
         mcm.SetToggleOptionValue(optionId, mcm.S_LowCountReset)
-    EndIf 
+    ElseIf (optionId == mcm.oid_Settings_ShowDropMessage)
+        mcm.S_ShowDropMessage = true
+        mcm.FixedProperties.SetShowDropMessage(true)
+        mcm.SetToggleOptionValue(optionId, mcm.S_ShowDropMessage)
+    ElseIf (optionId == mcm.oid_Settings_DestroyOnRemoval)
+        mcm.S_DestroyOnRemoval = true
+        mcm.SetToggleOptionValue(optionId, mcm.S_DestroyOnRemoval)
+        mcm.FixedProperties.SetDestroyOnRemoval(mcm.S_DestroyOnRemoval)
+    ElseIF (optionId == mcm.oid_Settings_OverStockedMerchants)
+        mcm.S_OverStockedEnabled = false
+        mcm.FixedProperties.OverStockedcMerchant = false
+        mcm.SetToggleOptionValue(optionId, mcm.S_OverStockedEnabled)
+        mcm.FixedProperties.SetNeedToUpdateMerchantChests()
+        mcm.FixedProperties.MerchantManager.UpdateResetCondtions()
+    ElseIf (optionId == mcm.oid_Settings_ExtraStartingGold)
+        mcm.S_ExtraStartingGold = 0
+        mcm.FixedProperties.ExtraGoldAmount = 0
+        mcm.SetSliderOptionValue(optionId, mcm.S_ExtraStartingGold, "By {0}")
+        mcm.FixedProperties.SetNeedToUpdateMerchantChests()
+        mcm.FixedProperties.MerchantManager.UpdateResetCondtions()
+    ElseIf (optionId == mcm.oid_Settings_MaxGoldInChest)
+        mcm.S_MaxGoldInChest = 6800.0
+        mcm.FixedProperties.MaxGoldValue = mcm.S_MaxGoldInChest
+        mcm.SetSliderOptionValue(optionId, mcm.S_MaxGoldInChest, "When Above {0}")
+    EndIf
 EndFunction ; OnDefault
 
 Function OnSliderOpen(YoureHiredMCM mcm, int optionId) global
-    if optionId == mcm.oid_Settings_MaxGoldInChest
-        mcm.SetSliderDialogStartValue(mcm.S_MaxGoldInChest)
-        mcm.SetSliderDialogDefaultValue(6800)
-        mcm.SetSliderDialogRange(mcm.S_MinGOldAmount,25000.0)
-        mcm.SetSliderDialogInterval(100.0)
-    elseIf optionId == mcm.oid_Settings_DaysBetweenReset
+    If optionId == mcm.oid_Settings_DaysBetweenReset
         mcm.SetSliderDialogStartValue(mcm.S_NumDaysBetweenReset)
         mcm.SetSliderDialogDefaultValue(2.0)
         mcm.SetSliderDialogRange(1.0, 7.0)
         mcm.SetSliderDialogInterval(0.5)
+    elseif optionId == mcm.oid_Settings_MaxGoldInChest
+        mcm.SetSliderDialogStartValue(mcm.S_MaxGoldInChest)
+        mcm.SetSliderDialogDefaultValue(6800)
+        mcm.SetSliderDialogRange(mcm.S_MinGOldAmount,25000.0)
+        mcm.SetSliderDialogInterval(100.0)
+    elseif optionId == mcm.oid_Settings_ExtraStartingGold
+        mcm.SetSliderDialogStartValue(mcm.S_ExtraStartingGold)
+        mcm.SetSliderDialogDefaultValue(0)
+        mcm.SetSliderDialogRange(0, 5000)
+        mcm.SetSliderDialogInterval(1000)
     endIf
 EndFunction
 
 Function OnSliderAccept(YoureHiredMCM mcm, int optionId, float value) global
-    if optionId == mcm.oid_Settings_MaxGoldInChest
-        mcm.S_MaxGoldInChest = value
-        mcm.FixedProperties.MaxGoldValue = value
-        mcm.SetSliderOptionValue(optionId, value, "When Above {0}")
-    elseif optionId == mcm.oid_Settings_DaysBetweenReset
+    if optionId == mcm.oid_Settings_DaysBetweenReset
         mcm.S_NumDaysBetweenReset = value
         mcm.FixedProperties.DaysBeforeReset = mcm.S_NumDaysBetweenReset
         mcm.SetSliderOptionValue(optionId, mcm.S_NumDaysBetweenReset, "Every {1} Days")
+    elseif optionId == mcm.oid_Settings_MaxGoldInChest
+        mcm.S_MaxGoldInChest = value
+        mcm.FixedProperties.MaxGoldValue = value
+        mcm.SetSliderOptionValue(optionId, value, "When Above {0}")
+    elseif optionId == mcm.oid_Settings_ExtraStartingGold
+        mcm.S_ExtraStartingGold = (value as int)
+        mcm.FixedProperties.ExtraGoldAmount = (value as int)
+        mcm.SetSliderOptionValue(optionId, value, "By {0}")
+        mcm.FixedProperties.SetNeedToUpdateMerchantChests()
+        mcm.FixedProperties.MerchantManager.UpdateResetCondtions()
     endIf
 EndFunction
 
