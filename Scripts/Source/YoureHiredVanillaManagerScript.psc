@@ -1,6 +1,8 @@
 Scriptname YoureHiredVanillaManagerScript extends Quest  
 {Used for any/all vanilla merchants that aren't currently You're Hired merchants}
 
+Import YHUtil
+
 YoureHiredMerchantPropertiesScript property FixedProperties auto
 int property ResetHotKey auto
 int property ResetSecondaryHotKey auto
@@ -41,10 +43,10 @@ Event OnMenuOpen(string openMenu)
                     vanillaResetFlag = true
                     vanillaFactions = CurrentMerchant.GetFactions(-120,120)
                     ResetHotKey = FixedProperties.Hotkey
-                    Logger("Registering for Hotkeys: " + ResetHotKey)
+                    Log(self + "Registering for Hotkeys: " + ResetHotKey)
                     RegisterForKey(ResetHotKey)
                     If (FixedProperties.RequireTwoKeys)
-                        Logger("Registering for secondaryHotKey")
+                        Log(self + "Registering for secondaryHotKey")
                         ResetSecondaryHotKey = FixedProperties.SecondaryHotkey
                         RegisterForKey(ResetSecondaryHotKey)
                     EndIf
@@ -57,13 +59,13 @@ Event OnMenuOpen(string openMenu)
 EndEvent
 
 Event OnKeyDown(int keyCode)
-    Logger("In the onKeyDown event")
+    Log(self + "In the onKeyDown event")
     If (vanillaResetFlag)
-        Logger("The barter menu is open")
+        Log(self + "The barter menu is open")
         If (Game.UsingGamepad())
             If (keyCode == ResetSecondaryHotKey)
                 If (isPrimaryKeyDown)
-                    Logger("About to reset!")
+                    Log(self + "About to reset!")
                     ResetChest(CurrentMerchant)
                     return
                 EndIf
@@ -71,11 +73,11 @@ Event OnKeyDown(int keyCode)
             EndIf
         EndIf
         If (keyCode == ResetHotKey)
-            Logger("It is our keycode: " + keyCode + ", " + ResetHotKey)
+            Log(self + "It is our keycode: " + keyCode + ", " + ResetHotKey)
             If (RequireSecondaryHotKey)
-                Logger("In required secondary ")
+                Log(self + "In required secondary ")
                 If (Input.IsKeyPressed(ResetSecondaryHotKey))
-                    Logger("in is key pressed")
+                    Log(self + "in is key pressed")
                     ResetChest(CurrentMerchant)
                 EndIf
                 If (isSecondaryKeyDown)
@@ -89,7 +91,7 @@ Event OnKeyDown(int keyCode)
 EndEvent
 
 Event OnKeyUP(int keycode, float holdTime)
-    Logger("We are in the key up event with: " + keycode + ", reset key: " + ResetHotKey + ", reset secondary key: " + ResetSecondaryHotKey)
+    Log(self + "We are in the key up event with: " + keycode + ", reset key: " + ResetHotKey + ", reset secondary key: " + ResetSecondaryHotKey)
     If (UI.IsMenuOpen("BarterMenu"))
         If (keyCode == ResetSecondaryHotKey)
             isSecondaryKeyDown = false
@@ -102,7 +104,7 @@ EndEvent
 
 Event OnMenuClose(string openMenu)
     if openMenu == "BarterMenu"
-        Logger("UnRegistering")
+        Log(self + "UnRegistering")
         FixedProperties.IsManagedMerchantTrading = false
         vanillaResetFlag = false
         If (FixedProperties.ResetOnMenuClose && FixedProperties.aaslrResetVanillaFlagGlobal.GetValue() > 0)
@@ -116,7 +118,7 @@ EndEvent
 
 Function ListenForMenuAndHotKeys()
     RegisterForMenu("BarterMenu")
-    Logger("Listening for menu")
+    Log(self + "Listening for menu")
 EndFunction
 
 Function StopListenting()
@@ -127,44 +129,32 @@ Function ResetChest(Actor akMerchant)
     int numFactions = vanillaFactions.Length
     YHUtil.AddLineBreakWithText(" Attempting to reset merchant: " + akMerchant.GetBaseObject().GetName())
     Faction thisFaction
-    Logger("Num factions: " + numFactions + ", factions array: " + vanillaFactions)
+    Log(self + "Num factions: " + numFactions + ", factions array: " + vanillaFactions)
     while numFactions
         numFactions -= 1
         thisFaction = vanillaFactions[numFactions]
         If (thisFaction.GetMerchantContainer())
-            Logger("Merchant chest is not null, resting...")
+            Log(self + "Merchant chest is not null, resting...")
             int goldInChest = thisFaction.GetMerchantContainer().GetItemCount(FixedProperties.gold)
             thisFaction.GetMerchantContainer().Reset()
             If (vanillaResetFlag)
                 UI.InvokeFloat("BarterMenu", "_root.Menu_mc.doTransaction", 0.0)
             EndIf
             If (goldInChest <= MAXGOLDAMOUNT)
-                Logger("Chest had less than max. goldInChest: " + goldInChest + ", merchnat has: " + akMerchant.GetItemCount(FixedProperties.gold) + " gold!")
+                Log(self + "Chest had less than max. goldInChest: " + goldInChest + ", merchnat has: " + akMerchant.GetItemCount(FixedProperties.gold) + " gold!")
                 int currentGold = thisFaction.GetMerchantContainer().GetItemCount(FixedProperties.gold)
                 If (goldInChest > currentGold)
                     goldInChest -= currentGold
                     thisFaction.GetMerchantContainer().AddItem(FixedProperties.gold, goldInChest, true)
                 EndIf
-                Logger("After reset. actual gold in chest: " + thisFaction.GetMerchantContainer().GetItemCount(FixedProperties.gold) + ", merchnat has: " + akMerchant.GetItemCount(FixedProperties.gold) + " gold!")
+                Log(self + "After reset. actual gold in chest: " + thisFaction.GetMerchantContainer().GetItemCount(FixedProperties.gold) + ", merchnat has: " + akMerchant.GetItemCount(FixedProperties.gold) + " gold!")
             Else
-                Logger("Chest had more than max. goldInChest: " + goldInChest + ", merchnat has: " + akMerchant.GetItemCount(FixedProperties.gold) + " gold!")
+                Log(self + "Chest had more than max. goldInChest: " + goldInChest + ", merchnat has: " + akMerchant.GetItemCount(FixedProperties.gold) + " gold!")
                 goldInChest = MAXGOLDAMOUNT
                 goldInChest -= thisFaction.GetMerchantContainer().GetItemCount(FixedProperties.gold)
                 thisFaction.GetMerchantContainer().AddItem(FixedProperties.gold, goldInChest, true)
-                Logger("After reset. actual gold in chest: " + thisFaction.GetMerchantContainer().GetItemCount(FixedProperties.gold) + ", merchnat has: " + akMerchant.GetItemCount(FixedProperties.gold) + " gold!")
+                Log(self + "After reset. actual gold in chest: " + thisFaction.GetMerchantContainer().GetItemCount(FixedProperties.gold) + ", merchnat has: " + akMerchant.GetItemCount(FixedProperties.gold) + " gold!")
             EndIf
         EndIf
     endWhile
-EndFunction
-
-Function Logger(string textToLog = "", bool logFlag = true, int logType = 1)
-    if logType == 1
-        YHUtil.Log("VanillaManager - " + textToLog, logFlag)
-    endIf
-    If logType == 2
-        YHUtil.AddLineBreakWithText("VanillaManager - " + textToLog, logFlag)
-    EndIf
-    If logType == 3
-        YHUtil.AddLineBreakGameTimeOptional(logFlag)
-    EndIf
 EndFunction

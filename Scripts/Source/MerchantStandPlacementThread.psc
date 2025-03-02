@@ -1,6 +1,8 @@
 Scriptname MerchantStandPlacementThread extends Quest Hidden 
 {This is the base for the merchant stand placement threads}
 
+Import YHUtil
+
 bool thread_queued = false
 
 ; main parts
@@ -26,7 +28,7 @@ float offsetRotaion
 bool invertCardinality
 
 Event OnInit()
-    Logger("We are in the thread on init")
+    Log(self + "We are in the thread on init")
     RegisterForModEvent("aaslrYH_PlaceStallObjects", "OnPlaceStallObj")
 EndEvent
 
@@ -35,7 +37,7 @@ Function ListenForModEvents()
 EndFunction
 
 Function get_async_stall(Furniture stall, ObjectReference activatorRef)
-    Logger("In the getasync stall")
+    Log(self + "In the getasync stall")
     thread_queued = true
     merchantStallFurniture = stall
     theActivator = activatorRef
@@ -43,7 +45,7 @@ Function get_async_stall(Furniture stall, ObjectReference activatorRef)
 EndFunction
 
 ; Function get_async_chair(Furniture chair, static xmarker, Actor player)
-;     Logger("In the getasync chair")
+;     Log(self + "In the getasync chair")
 ;     thread_queued = true
 ;     childChairFurniture = chair
 ;     theMarker = xmarker
@@ -52,7 +54,7 @@ EndFunction
 ; EndFunction
 
 Function get_async_mapMarker(ObjectReference map, static xmarker, Actor player, ObjectReference stallRef)
-    Logger("In the getasync mapMarker")
+    Log(self + "In the getasync mapMarker")
     thread_queued = true
     merchantStallRef = stallRef
     mapMarker = map
@@ -62,7 +64,7 @@ Function get_async_mapMarker(ObjectReference map, static xmarker, Actor player, 
 EndFunction
 
 Function get_async_Idle(ObjectReference idleRef, static xmarker, Actor player, float distance, float angle, float rotation, ObjectReference stallRef = NONE, bool invert = false)
-    Logger("In the getasync idle")
+    Log(self + "In the getasync idle")
     thread_queued = true
     idleMarker = idleRef
     theMarker = xmarker
@@ -93,7 +95,7 @@ EndEvent
 
 State StallState
     Event OnPlaceStallObj()
-        Logger("In the OnPlaceStallObj Event")
+        Log(self + "In the OnPlaceStallObj Event")
         
         ObjectReference resultObj = theActivator.PlaceAtMe(merchantStallFurniture, 1, true, true)
         resultObj.SetAngle(0,0,resultObj.GetAngleZ())
@@ -106,7 +108,7 @@ EndState
 
 ; State ChairState
 ;     Event OnPlaceStallObj()
-;         Logger("In the OnPlaceChairObj Event")
+;         Log(self + "In the OnPlaceChairObj Event")
 ;         ObjectReference tempRef = PlayerRef.PlaceAtMe(theMarker, 1)
 ;         tempRef.SetAngle(0,0,(tempRef.GetAngleZ() + 145))
 ;         tempRef.MoveTo(tempRef, 40 * Math.Sin(tempRef.GetAngleZ()), 40 * Math.Cos(tempRef.GetAngleZ()), 0, false)
@@ -125,17 +127,17 @@ EndState
 
 State MapMarkerState
     Event OnPlaceStallObj()
-        Logger("In the OnPlaceMapMarkerObj Event")
+        Log(self + "In the OnPlaceMapMarkerObj Event")
         
         ObjectReference tempRef = PlayerRef.PlaceAtMe(theMarker, 1)
         
+        mapMarker.MoveTo(tempRef, (125 + merchantStallRef.GetWidth()) * Math.Sin(tempRef.GetAngleZ()), (125 + merchantStallRef.GetWidth()) * Math.Cos(tempRef.GetAngleZ()), 40.0, true)
+        mapMarker.SetAngle(0.0,0.0, (tempRef.GetAngleZ() - 180))
+        mapMarker.Enable()
         If (!tempRef.GetParentCell().IsInterior())
-            mapMarker.MoveTo(tempRef, (125 + merchantStallRef.GetWidth()) * Math.Sin(tempRef.GetAngleZ()), (125 + merchantStallRef.GetWidth()) * Math.Cos(tempRef.GetAngleZ()), 0.0, true)
-            mapMarker.SetAngle(0.0,0.0, (tempRef.GetAngleZ() - 180))
-            mapMarker.Enable()
             mapMarker.AddToMap()
             mapMarker.EnableFastTravel()
-            Logger("Map Marker has been placed!!")
+            Log(self + "Map Marker has been placed!!")
         EndIf
         tempRef.Disable()
         tempRef.Delete()
@@ -148,12 +150,11 @@ EndState
 
 State IdleState
     Event OnPlaceStallObj()
-        Logger("In the OnPlaceIdleObj Event")
+        Log(self + "In the OnPlaceIdleObj Event")
         ObjectReference tempRef = PlayerRef.PlaceAtMe(theMarker, 1)
         tempRef.SetAngle(0.0, 0.0, PlayerRef.GetAngleZ())
-        Logger("distance: " + offsetDistance + ", angle: " + offsetAngle + ", rotation: " + offsetRotaion)
+        Log(self + "distance: " + offsetDistance + ", angle: " + offsetAngle + ", rotation: " + offsetRotaion)
         if merchantStallRef
-            Logger("Using stallRef width")
             offsetDistance += merchantStallRef.GetWidth()
         endIf
 
@@ -161,22 +162,19 @@ State IdleState
         float y
         
         if offsetAngle != 0
-            Logger("ofsetAngle is not 0: " + offsetAngle)
             tempRef.SetAngle(0.0,0.0, (tempRef.GetAngleZ() + offsetAngle))
         endIf
         if invertCardinality
-            Logger("inverting cardinality")
             x = Math.Cos(tempRef.GetAngleZ())
             y = Math.Sin(tempRef.GetAngleZ())
         else
             x = Math.Sin(tempRef.GetAngleZ())
             y = Math.Cos(tempRef.GetAngleZ())
         endIf
-        tempRef.MoveTo(tempRef, offsetDistance * x, offsetDistance * y, 0.0, true)
+        tempRef.MoveTo(tempRef, offsetDistance * x, offsetDistance * y, 40.0, true)
         ObjectReference resultObj = tempRef.PlaceAtMe(idleMarker.GetBaseObject(), 1, true, false)
         
         if offsetRotaion != 0
-            Logger("offsetRotation is not 0: " + offsetRotaion)
             resultObj.SetAngle(0.0,0.0, resultObj.GetAngleZ() + offsetRotaion)
         endIf
 
@@ -223,37 +221,9 @@ Function RetryRaiseEvent(ObjectReference stallObj)
         ModEvent.PushForm(anotherHandle, stallObj)
         ModEvent.Send(anotherHandle)
     else
-        ; If GetState() == "StallState"
-        ;     int finalHandle = ModEvent.Create("aaslrYH_StallPlacementFailed")
-        ;     if finalHandle
-        ;         ModEvent.Send(finalHandle)
-        ;     endIf
-        ; ElseIf GetState() == "MapMarkerState"
-        ;     int finalHandle = ModEvent.Create("aaslrYH_MapMarkerPlacementFailed")
-        ;     if finalHandle
-        ;         ModEvent.Send(finalHandle)
-        ;     endIf
-        ; ElseIf GetState() == "ChairState"
-        ;     int finalHandle = ModEvent.Create("aaslrYH_ChairPlacementFailed")
-        ;     if finalHandle
-        ;         ModEvent.Send(finalHandle)
-        ;     endIf
-        ; EndIf
-        Logger("We had to delete the placed object after retry: " + GetState())
+        Log(self + "We had to delete the placed object after retry: " + GetState())
         stallObj.Disable()
         stallObj.Delete()
     endIf
 EndFunction
 
-
-Function Logger(string textToLog = "", bool logFlag = true, int logType = 1)
-    if logType == 1
-        YHUtil.Log("Thread - " + textToLog, logFlag)
-    endIf
-    If logType == 2
-        YHUtil.AddLineBreakWithText("Thread - " + textToLog, logFlag)
-    EndIf
-    If logType == 3
-        YHUtil.AddLineBreakGameTimeOptional(logFlag)
-    EndIf
-EndFunction

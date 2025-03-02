@@ -8,7 +8,7 @@ EndFunction
 Function AddLineBreakGameTimeOptional(bool useTimeBreak = true) global
     string txt = "*****************"
     if useTimeBreak
-        txt +=  Utility.GameTimeToString(Utility.GetCurrentGameTime())
+        txt +=  Utility.GetCurrentRealTime()
     endIf
     txt += "*****************"
     Debug.Trace("[You're Hired!] : " + txt)

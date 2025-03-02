@@ -1,66 +1,62 @@
 Scriptname SellAllJunkScript extends ObjectReference  
 
+Import YHUtil
+
 Quest property YoureHired auto
 FormList property JunkFilterFormList auto
 bool changeDetected = false
+int junkMap
 
 Event OnActivate(ObjectReference akActionRef)
     if akActionRef == (YoureHired as YoureHiredMerchantPropertiesScript).PlayerRef
-        Logger("We are in the OnActivate event")
+        Log(self + "We are in the OnActivate event")
         RegisterForMenu("ContainerMenu")
     endif
 EndEvent
 
 Event OnItemAdded(Form akBaseItem, int aiItemCount, ObjectReference akItemReference, ObjectReference akSourceContainer)
+    GoToState("DuplicateItem")
+    
     if !changeDetected
         changeDetected = true
     endIf
-    if JunkFilterFormList.Find(akBaseItem) > -1
-        GoToState("DuplicateItem")
+    int formIndex = JunkFilterFormList.Find(akBaseItem)
+    Log(self + "formIndex : " + formIndex + ", " + akBaseItem.GetName() + ", itemCount: " + aiItemCount)
+    if formIndex > -1 
         RemoveItem(akBaseItem, aiItemCount, true, akSourceContainer)
-        GoToState("")
         return
     endIf
     JunkFilterFormList.AddForm(akBaseItem)
     if aiItemCount > 1
-        GoToState("DuplicateItem")
         RemoveItem(akBaseItem, (aiItemCount - 1), true, akSourceContainer)
-        GoToState("")
+        Utility.WaitMenuMode(0.1)
     endIf
-    Logger(akBaseItem.GetName() + " was added!")
+    Log(self + akBaseItem.GetName() + " was added!")
+    
+    GoToState("")
 EndEvent
+
 
 Event OnItemRemoved(Form akBaseItem, int aiItemCount, ObjectReference akItemReference, ObjectReference akDestContainer)
     if !changeDetected
         changeDetected = true
     endIf
-
+    
     if JunkFilterFormList.HasForm(akBaseItem)
         JunkFilterFormList.RemoveAddedForm(akBaseItem)
-        Logger(akBaseItem.GetName() + " was removed!")
+        Log(self + akBaseItem.GetName() + " was removed!")
     endIf
 EndEvent
 
 State DuplicateItem
     Event OnItemRemoved(Form akBaseItem, int aiItemCount, ObjectReference akItemReference, ObjectReference akDestContainer)
+        Log(self + "In the duplicateItemState")
     EndEvent
 EndState
 
 
-Function Logger(string textToLog = "", bool logFlag = true, int logType = 1)
-    if logType == 1
-        YHUtil.Log("SellAllJunkScritp - " + textToLog, logFlag)
-    endIf
-    If logType == 2
-        YHUtil.AddLineBreakWithText("SellAllJunkScritp - " + textToLog, logFlag)
-    EndIf
-    If logType == 3
-        YHUtil.AddLineBreakGameTimeOptional(logFlag)
-    EndIf
-EndFunction
-
 Event OnMenuClose(string menu)
-    Logger("We are in the OnClose event")
+    Log(self + "We are in the OnClose event")
     UnRegisterForMenu("ContainerMenu")
     if menu == "ContainerMenu"
         if changeDetected

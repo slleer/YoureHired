@@ -22,6 +22,8 @@ Event OnInit()
     Log("InvItemScript - We are in the inventory items on init")
 EndEvent
 
+
+
 Event OnContainerChanged(ObjectReference akNewContainer, ObjectReference akOldContainer)
 
     Log("InvItemScript - We are in teh change container event.")
@@ -29,18 +31,9 @@ Event OnContainerChanged(ObjectReference akNewContainer, ObjectReference akOldCo
         if (YoureHired as YoureHiredMerchantPropertiesScript).GetShowDropMessage()
             int answer = DropStallMessage.Show()
             if answer > 0
-                Log("InvItemScript - You decided to keep the item.")
                 akOldContainer.AddItem(self as form, 1, true)
             endIf
         endIf
-    elseif akNewContainer && !akOldContainer
-      Debug.Trace("We have been picked up!")
-    else
-        if akNewContainer == Game.GetPlayer()
-            ; thisFaction = (akOldContainer as BusinessScript).YoureHiredFaction
-            Log("InvItemScript - we were bought or sold")
-        endIf        
-        Debug.Trace("We have switched containers!")
     endIf
 endEvent
 
@@ -59,9 +52,9 @@ Auto State OrphanState
         GoToState("BusyState")
         if akActor == PlayerRef
             BusinessScript merchant = (YoureHired as YoureHiredMCM).MM_ThisMerchant
-            if merchant && !merchant.GetMerchnatStandInventoryItem()
-                int index = (YoureHired as MerchantScript).GetMerchantAliasIndex(merchant)
-                If (!(YoureHired as YoureHiredMerchantPropertiesScript).ActivatorsCurrent[index])
+            if merchant && !merchant.GetMerchnatStandInventoryItem() && (!merchant.isAnimal)
+                int index = merchant.GetMerchantIndex()
+                If (!(YoureHired as YoureHiredMerchantPropertiesScript).StallActivatorsCurrent[index])
                     SetOwningMerchant(merchant)
                     owningMerchant.SetInventoryMerchantStall(self)
                     GoToState("PlaceStallState")
@@ -80,34 +73,26 @@ State PlaceStallState
     Event OnEquipped(Actor akActor)
         GoToState("BusyState")
         If (akActor == PlayerRef) 
-            Log("about to see if gate is locked")
+            Log("about to place stall")
             If (owningMerchant.ProxyActor) 
-                Log("InvItemScript - We are in effect event" + XMarker)
                 
                 theMarker = akActor.PlaceAtMe(XMarker, 1)
-                Log("InvItemScript - staticLength: " + staticLength)
                 theMarker.MoveTo(akActor, (staticLength * Math.Sin(theMarker.GetAngleZ())), (staticLength * Math.Cos(theMarker.GetAngleZ())), -5.0, true)
                 theMarker.SetAngle(0.0,0.0,akActor.GetAngleZ())
                 ObjectReference newActivator = theMarker.PlaceAtMe(thisActivator, 1, true, false)
-                ; newActivator.SetAngle(0,0,newActivator.GetAngleZ())
                 (newActivator as MerchantStallActivationScript).SetOwningMerchant(owningMerchant)
                 (newActivator as MerchantStallActivationScript).PlaceRemainingStallObjects()            
                 
-                int index = (YoureHired as MerchantScript).GetMerchantAliasIndex(owningMerchant)
-                GlobalVariable merchantPackage = (YoureHired as YoureHiredMerchantPropertiesScript).Merchant_PackageEnable[index]
-                merchantPackage.SetValueInt(1)
-                Quest.GetQuest("aaslrYoureHiredMainQuest").UpdateCurrentInstanceGlobal(merchantPackage)
-                Log("InvItemScript - The global is: " + merchantPackage.GetValueInt())
-                theMarker.Disable()
-                theMarker.Delete()
                 If (Game.GetPlayer().GetItemCount(Self))
-                    Log("InvItemScript - The player has this item (self)")
                     owningMerchant.ClearInventoryMerchantStall()
                     Game.GetPlayer().RemoveItem(self)
+                
                 EndIf
-    
-                EndIf
+                
+                theMarker.Disable()
+                theMarker.Delete()
             EndIf
+        EndIf
         GoToState("PlaceStallState")
     EndEvent
     

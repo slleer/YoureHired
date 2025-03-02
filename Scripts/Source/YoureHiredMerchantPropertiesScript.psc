@@ -1,5 +1,8 @@
 Scriptname YoureHiredMerchantPropertiesScript extends Quest  
 {This is a helper script that holds properties needed by the BusinessManager script to avoid having multiple references to the same static properties}
+
+Import YHUtil
+
 Actor property PlayerRef auto
 Faction property JobMerchantFaction auto
 Faction property YoureHiredFenceFaction auto
@@ -8,22 +11,20 @@ MerchantScript property MerchantManager auto
 YoureHiredVanillaManagerScript property YHVanillaManagerScript auto
 
 ObjectReference property InvMerchantStand auto
-ObjectReference[] property ActivatorsCurrent auto
+ObjectReference property InvRugSleepMarker auto
+ObjectReference[] property StallActivatorsCurrent auto
+ObjectReference[] property RugActivatorsCurrent auto
 MiscObject property gold auto
 
 GlobalVariable property aaslrNumberOfMerchants auto
 GlobalVariable property aaslrMaxNumberMerchants auto
+GlobalVariable property aaslrMaxGoldValueGlobal auto
+GlobalVariable[] property MerchantStall_PackageEnable auto
+GlobalVariable[] property MerchantSleep_PackageEnable auto
+
 GlobalVariable property aaslrResetVanillaFlagGlobal auto
 GlobalVariable property aaslrAllowBeastsFlag auto
 GlobalVariable property aaslrAllowChildrenFlag auto
-GlobalVariable property aaslrFenceWantedFlag auto
-GlobalVariable property aaslrNowHiringFlagGlobal auto
-GlobalVariable property aaslrRepeatCustomerFlagGlobal auto
-GlobalVariable property aaslrBonusStockGlobal auto
-GlobalVariable property aaslrMaxGoldValueGlobal auto
-GlobalVariable[] property BonusMerchantGoldGlobals auto
-GlobalVariable[] property Merchant_PackageEnable auto
-
 
 FormList property AddedMerchantMessageFormList auto
 FormList property RemovedMerchantMessageFormList auto
@@ -38,6 +39,7 @@ FormList property MerchantChestList auto
 
 ;Used for identifing actors to add job type factions to
 FormList property aaslrYoureHiredVoiceTypeJobFactionsFormList auto
+FormLIst property aaslrPlayableRacesFormList auto
 FormList property aaslrVoicesNPCsNOCHILD auto
 FormList property aaslrAnimalVoiceTypes auto
 FormList property aaslrVoicesApothecary auto
@@ -64,32 +66,14 @@ bool AtLeastOneMerchant
 bool showDropMessage = true
 bool MerchantsAreFull
 bool DestroyOnRemoval = true
-int NeedToUpdateMerchantChests
-int ToggleBetweenMenuOrGametimeReset
+bool NeedToUpdateMerchantChests
+bool ToggleBetweenMenuOrGametimeReset
+bool updateVanillaMerchantFaction
 
 int MerchantChestListSize
 int NumMerchants
 
-int _extraGoldAmount
-int property ExtraGoldAmount
-    Function Set(int extra)
-        _extraGoldAmount = extra
-        extra /= 1000
-        extra -= 1
-        int index = 0
-        while index < BonusMerchantGoldGlobals.Length
-            if index <= extra
-                BonusMerchantGoldGlobals[index].SetValue(0.0)
-            else
-                BonusMerchantGoldGlobals[index].SetValue(100.0)
-            endIf
-            index += 1
-        endWhile
-    EndFunction
-    int Function Get()
-        return _extraGoldAmount
-    EndFunction
-EndProperty
+
 
 float _maxGoldValue
 float property MaxGoldValue 
@@ -102,28 +86,10 @@ float property MaxGoldValue
     EndFunction
 endProperty
 
-bool _overStockedMerchant
-bool property OverStockedcMerchant
-    Function Set(bool stocked)
-        _overStockedMerchant = stocked
-        If (stocked)
-            aaslrBonusStockGlobal.SetValue(0.0)
-            Logger("Merchants are now overstocked")
-        else
-            aaslrBonusStockGlobal.SetValue(100.0)
-            Logger("Merchants are no longer overstocked")
-        EndIf
-    EndFunction
-    bool Function Get()
-        return _overStockedMerchant
-    EndFunction
-EndProperty
-
-
-
 Event OnInit()
-    Logger("In the OnInit", logType = 2)
-    ActivatorsCurrent = new ObjectReference[12]
+    AddLineBreakWithText(self + "In the OnInit")
+    StallActivatorsCurrent = new ObjectReference[12]
+    RugActivatorsCurrent = new ObjectReference[12]
     MerchantChestListSize = MerchantChestList.GetSize()
     MaxGoldValue = aaslrMaxGoldValueGlobal.GetValue()
     NumMerchants = 0
@@ -141,25 +107,55 @@ Event OnInit()
     endWhile
 EndEvent
 
-Function AddActivatorToList(ObjectReference thisActivator, BusinessScript owningMerchant)
-    int index = MerchantManager.GetMerchantAliasIndex(owningMerchant)
+Function AddRugActivatorToList(ObjectReference thisActivator, BusinessScript owningMerchant)
+    int index = owningMerchant.GetMerchantIndex()
     if index > -1
-        If (ActivatorsCurrent[index])
-            if ActivatorsCurrent[index] != thisActivator
-                (ActivatorsCurrent[index] as MerchantStallActivationScript).DestroyThisMerchantStand()
+        If (RugActivatorsCurrent[index])
+            if RugActivatorsCurrent[index] != thisActivator
+                (RugActivatorsCurrent[index] as MerchantStallActivationScript).DestroyThisMerchantStand()
             endIf
         EndIf
-        ActivatorsCurrent[index] = thisActivator
+        RugActivatorsCurrent[index] = thisActivator
     else
-        Logger("No empty spaces found when trying to put activator into array.")
+        Log(self + "No empty spaces found when trying to put rug activator into array.")
     endIf
 EndFunction
 
-Function RemoveActivatorFromList(ObjectReference thisActivator)
-    int index = ActivatorsCurrent.Find(thisActivator)
+
+Function RemoveRugActivatorFromList(ObjectReference thisActivator)
+    int index = RugActivatorsCurrent.Find(thisActivator)
     if index > -1
-        ActivatorsCurrent[index] = none
+        RugActivatorsCurrent[index] = none
     endIf
+EndFunction
+
+RugActivationScript Function GetRugActivatorAsScript(int index)
+    return (RugActivatorsCurrent[index] as RugActivationScript)
+EndFunction
+
+Function AddStallActivatorToList(ObjectReference thisActivator, BusinessScript owningMerchant)
+    int index = owningMerchant.GetMerchantIndex()
+    if index > -1
+        If (StallActivatorsCurrent[index])
+            if StallActivatorsCurrent[index] != thisActivator
+                (StallActivatorsCurrent[index] as MerchantStallActivationScript).DestroyThisMerchantStand()
+            endIf
+        EndIf
+        StallActivatorsCurrent[index] = thisActivator
+    else
+        Log(self + "No empty spaces found when trying to put stall activator into array.")
+    endIf
+EndFunction
+
+Function RemoveStallActivatorFromList(ObjectReference thisActivator)
+    int index = StallActivatorsCurrent.Find(thisActivator)
+    if index > -1
+        StallActivatorsCurrent[index] = none
+    endIf
+EndFunction
+
+MerchantStallActivationScript Function GetStallActivatorAsScript(int index)
+    return (StallActivatorsCurrent[index] as MerchantStallActivationScript)
 EndFunction
 
 bool Function HasAtLeastOneMerchant()
@@ -170,12 +166,22 @@ ObjectReference Function GetInventoryStand()
     return InvMerchantStand.PlaceAtMe(InvMerchantStand.GetBaseObject(), 1, true, false)
 EndFunction
 
+ObjectReference Function GetInvRugSleepMarker()
+    Log(self + " InvRugSleepMarker: " + InvRugSleepMarker)
+    return InvRugSleepMarker.PlaceAtMe(InvRugSleepMarker.GetBaseObject(), 1, true, false)
+EndFunction
+
+
+
 Function SendListeningCommands()
-    int index = ActivatorsCurrent.Length
+    int index = StallActivatorsCurrent.Length
     while index
         index -= 1
-        if ActivatorsCurrent[index]
-            (ActivatorsCurrent[index] as MerchantStallActivationScript).ListenForModEvents()
+        if StallActivatorsCurrent[index]
+            (StallActivatorsCurrent[index] as MerchantStallActivationScript).ListenForModEvents()
+        endIf
+        if RugActivatorsCurrent[index]
+            (RugActivatorsCurrent[index] as RugActivationScript).ListenForModEvents()
         endIf
     endWhile
 EndFunction
@@ -200,18 +206,6 @@ Function SetDestroyOnRemoval(bool destroy)
     DestroyOnRemoval = destroy
 EndFunction
 
-Function Logger(string textToLog = "", bool logFlag = true, int logType = 1)
-    if logType == 1
-        YHUtil.Log("MerchantProperties - " + textToLog, logFlag)
-    endIf
-    If logType == 2
-        YHUtil.AddLineBreakWithText("MerchantProperties - " + textToLog, logFlag)
-    EndIf
-    If logType == 3
-        YHUtil.AddLineBreakGameTimeOptional(logFlag)
-    EndIf
-EndFunction
-
 Faction Function GetFactionByString(string chestType)
     return JobTypesFactionList.GetAt(ChestTypeText.Find(chestType)) as Faction
 EndFunction
@@ -224,20 +218,28 @@ int Function GetNumMerchantsGlobal()
     return NumMerchants
 EndFunction
 
-Function SetToggleBetweenMenuOrGametimeReset(int reset = 1)
+Function SetToggleBetweenMenuOrGametimeReset(bool reset = true)
     ToggleBetweenMenuOrGametimeReset = reset
 EndFunction
 
-int Function GetToggleBetweenMenuOrGametimeReset()
+bool Function GetToggleBetweenMenuOrGametimeReset()
     return ToggleBetweenMenuOrGametimeReset
 EndFunction
 
-Function SetNeedToUpdateMerchantChests(int reset = 1)
+Function SetNeedToUpdateMerchantChests(bool reset = true)
     NeedToUpdateMerchantChests = reset
 EndFunction
 
-int Function GetNeedToUpdateMerchantChests()
+bool Function GetNeedToUpdateMerchantChests()
     return NeedToUpdateMerchantChests
+EndFunction
+
+Function SetUpdateVanillaMerchantFaction(bool reset = true)
+    updateVanillaMerchantFaction = reset
+EndFunction
+
+bool Function GetUpdateVanillaMerchantFaction()
+    return updateVanillaMerchantFaction
 EndFunction
 
 Function SetNumMerchantsGlobal(float numDiff)

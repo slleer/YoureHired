@@ -1,6 +1,8 @@
 Scriptname MerchantScript extends Quest  
 {Manages all merchants and handles adding/removing them}
 
+Import YHUtil
+
 YoureHiredMerchantPropertiesScript property FixedProperties auto
 PlayerRefScript property PlayerScript auto
 
@@ -18,8 +20,8 @@ Quest myQuest
 
 
 Event OnInit()
-    Logger("We are in the OnInit",logType = 2)
-    Logger(logType = 3)
+    AddLineBreakWithText(self + "We are in the OnInit")
+    AddLineBreakGameTimeOptional()
     myQuest = Quest.GetQuest("aaslrYoureHiredMainQuest")
     int numAlias = FixedProperties.aaslrMaxNumberMerchants.GetValueInt()
     hiredActors = new Actor[12]
@@ -28,98 +30,78 @@ Event OnInit()
     int index = 0
     While (index < numAlias)
         merchantAliases[index] = (myQuest.GetNthAlias(index) as BusinessScript)
+        merchantAliases[index].SetMerchantIndex(index)
         index += 1
     EndWhile
     NextOpenAlias = 0
     ; RegisterForMenu("Journal Menu")
 EndEvent
 
-; Event OnMenuClose(string openMenu)
-;     Logger("The menu that was closed is: " + openMenu)
-;     if openMenu == "Journal Menu"
-;         If FixedProperties.UpdateNeeded > 0
-;             int index = 0
-;             Logger("Need to update")
-;             Actor thisMerchant
-;             While index < FixedProperties.aaslrMaxNumberMerchants.GetValueInt()
-;                 thisMerchant = hiredActors[index]
-;                 Logger("This merchant" + thisMerchant)
-;                 if thisMerchant
-;                     If FixedProperties.ToggleBetweenMenuOrGametimeReset > 0
-;                         merchantAliases[index].MerchantChestScript.ToggleOnMenuCloseOrGametime()
-;                     EndIf
-;                     If FixedProperties.NeedToUpdateMerchantChests > 0
-;                         merchantAliases[index].MerchantChestScript.ResetChest(false)
-;                     EndIf
-;                 endIf
-;                 index += 1
-;             EndWhile
-;             FixedProperties.UpdateNeeded = 0
-;             FixedProperties.ToggleBetweenMenuOrGametimeReset = 0
-;             FixedProperties.NeedToUpdateMerchantChests = 0
-;         EndIf
-;         Logger("End of OnMenuClose")
-;     endIf
-; EndEvent
 
 Event OnUpdate()
-    Logger(" We are in the update event!!!")
+    Log(self + " We are in the update event!!!")
+    Utility.wait(0.1)
     int index = 0
-    Logger("Need to update")
     Actor thisMerchant
     While index < FixedProperties.aaslrMaxNumberMerchants.GetValueInt()
         thisMerchant = hiredActors[index]
-        Logger("This merchant" + thisMerchant)
+        Log(self + "This merchant" + thisMerchant)
         if thisMerchant
-            If FixedProperties.GetToggleBetweenMenuOrGametimeReset() > 0
+            If FixedProperties.GetToggleBetweenMenuOrGametimeReset()
                 merchantAliases[index].MerchantChestScript.ToggleOnMenuCloseOrGametime()
             EndIf
-            If FixedProperties.GetNeedToUpdateMerchantChests() > 0
+            If FixedProperties.GetNeedToUpdateMerchantChests()
                 merchantAliases[index].MerchantChestScript.ResetChest(false)
             EndIf
+            If (FixedProperties.GetUpdateVanillaMerchantFaction())
+                If (merchantAliases[index].GetIsVanillaMerchant())
+                    If (myQuest as YoureHiredMCM).S_DoubleMerchantEnabled
+                        If (!thisMerchant.IsInFaction(FixedProperties.JobMerchantFaction))
+                            thisMerchant.AddToFaction(FixedProperties.JobMerchantFaction)
+                            thisMerchant.SetFactionRank(FixedProperties.JobMerchantFaction, merchantAliases[index].GetJobMerchantFactionRank())
+                        EndIf
+                    Else
+                        If (thisMerchant.IsInFaction(FixedProperties.JobMerchantFaction))
+                            merchantAliases[index].SetJobMerchantFactionRank(thisMerchant.GetFactionRank(FixedProperties.JobMerchantFaction))
+                            thisMerchant.RemoveFromFaction(FixedProperties.JobMerchantFaction)
+                        EndIf
+                    EndIf
+                EndIf
+            EndIf
+
         endIf
         index += 1
     EndWhile
-    FixedProperties.SetToggleBetweenMenuOrGametimeReset(0)
-    FixedProperties.SetNeedToUpdateMerchantChests(0)
+    FixedProperties.SetToggleBetweenMenuOrGametimeReset(false)
+    FixedProperties.SetNeedToUpdateMerchantChests(false)
     isWaiting = false
 EndEvent
 
-Function Logger(string textToLog = "", bool logFlag = true, int logType = 1)
-    if logType == 1
-        YHUtil.Log("MerchantManager Redux - " + textToLog, logFlag)
-    endIf
-    If logType == 2
-        YHUtil.AddLineBreakWithText("MerchantManager Redux - " + textToLog, logFlag)
-    EndIf
-    If logType == 3
-        YHUtil.AddLineBreakGameTimeOptional(logFlag)
-    EndIf
-EndFunction
 
 BusinessScript[] Function GetMerchantAliasScripts()
     return merchantAliases
 EndFunction
 
-int Function GetMerchantAliasIndex(BusinessScript merchant)
-    return merchantAliases.Find(merchant)
-EndFunction
-
 string[] Function GetMerchantNames()
     int index = 0
+    int nameIndex = 0
     while index < hiredActors.Length
         If hiredActors[index]
-            merchantNames[index] = hiredActors[index].GetBaseObject().GetName()
-        Else
-            merchantNames[index] = "*EMPTY*"
+            merchantNames[nameIndex] = hiredActors[index].GetBaseObject().GetName()
+            nameIndex += 1
+        ; Else
+        ;     merchantNames[index] = "*EMPTY*"
         EndIf       
         index += 1
     endWhile
-    return merchantNames
+    return Utility.ResizeStringArray(merchantNames, nameIndex)
 EndFunction
 
 bool Function IsValidMerchantType(Actor akMerchant)
     If (FixedProperties.aaslrVoicesNPCsNOCHILD.HasForm(akMerchant.GetVoiceType()))
+        return true
+    EndIf
+    If (FixedProperties.aaslrPlayableRacesFormList.HasForm(akMerchant.GetRace()))
         return true
     EndIf
     If (akMerchant.IsChild())
@@ -138,12 +120,12 @@ EndFunction
 
 ; ;Add or remove an actor as a merchant
 ; Function HandleMerchant(Actor akMerchant)
-;     Logger("In AddRemoveMerchant with: " + akMerchant.GetBaseObject().GetName(), 2)
+;     Log(self + "In AddRemoveMerchant with: " + akMerchant.GetBaseObject().GetName(), 2)
 ;     If (hiredActors.Find(akMerchant) > -1)
 ;         DoRemoveMerchant(akMerchant)
 ;     ElseIf IsValidMerchantType(akMerchant)
 ;         If (FixedProperties.GetNumMerchantsGlobal() < (FixedProperties.aaslrMaxNumberMerchants.GetValue() as int))
-;             Logger("Actor is not yet a merchant")
+;             Log(self + "Actor is not yet a merchant")
 ;             if NextOpenAlias > -1
 ;                 DoAddMerchant(akMerchant)
 ;             Else
@@ -156,7 +138,7 @@ EndFunction
 ;                 EndIf
 ;             endIf
 ;         Else
-;             Logger("NextOpenAlias pointed to filled alias")
+;             Log(self + "NextOpenAlias pointed to filled alias")
 ;             FixedProperties.FullMerchantListMessage.Show()
 ;         EndIf
 ;     EndIf
@@ -164,8 +146,8 @@ EndFunction
 
 ;Add an actor as a Merchant from dialogue
 Function AddMerchant(Actor akMerchant)
-    Logger(logType = 3)
-    Logger("In AddMerchant (from dialogue) with: " + akMerchant.GetBaseObject().GetName(), true, 2)
+    AddLineBreakGameTimeOptional()
+    Log(self + "In AddMerchant (from dialogue) with: " + akMerchant.GetBaseObject().GetName())
     If (IsValidMerchantType(akMerchant))
         If hiredActors.Find(akMerchant) < 0
             if NextOpenAlias > -1
@@ -182,7 +164,7 @@ Function AddMerchant(Actor akMerchant)
 EndFunction
 
 Function DoAddMerchant(Actor akMerchant)
-    Logger("Actor is not yet a merchant, in DoAddMerchant")
+    Log(self + "Actor is not yet a merchant, in DoAddMerchant")
     BusinessScript newMerchant = merchantAliases[NextOpenAlias]
     bool success
     If (!newMerchant.GetActorReference())             
@@ -195,14 +177,14 @@ Function DoAddMerchant(Actor akMerchant)
         hiredActors[NextOpenAlias] = akMerchant
         NextOpenAlias = hiredActors.Find(NONE)
     Else
-        Logger("NextOpenAlias pointed to filled alias or actor is already a merchant!")
+        Log(self + "NextOpenAlias pointed to filled alias or actor is already a merchant!")
         FixedProperties.FailedAddMerchantMessage.Show()
     EndIf        
 EndFunction
 
 ; Remove an actor as a Merchant from dialogue
 Function RemoveMerchant(Actor akMerchant)
-    Logger("Removing a merchant from dialogue")
+    Log(self + "Removing a merchant from dialogue")
     If (hiredActors.Find(akMerchant) > -1)
         DoRemoveMerchant(akMerchant)
     EndIf
@@ -211,31 +193,31 @@ EndFunction
 Function DoRemoveMerchant(Actor akMerchant)
     LastFoundMerchant = hiredActors.Find(akMerchant)
     BusinessScript exMerchant = merchantAliases[LastFoundMerchant]
-    Logger("removing actor from merchants")
+    Log(self + "removing actor from merchants")
     FixedProperties.SetNumMerchantsGlobal(-1.0)
     myQuest.UpdateCurrentInstanceGlobal(FixedProperties.aaslrNumberOfMerchants)
     (FixedProperties.RemovedMerchantMessageFormList.GetAt(LastFoundMerchant) as Message).Show()
     exMerchant.clearActorFromAlias()
     hiredActors[LastFoundMerchant] = NONE
     NextOpenAlias = LastFoundMerchant
-    Logger("Actor cleared from alias!!!")
+    Log(self + "Actor cleared from alias!!!")
 EndFunction
 
 Function RemoveThisMerchant(BusinessScript thisMerchant)
     LastFoundMerchant = hiredActors.Find(thisMerchant.GetActorReference())
-    Logger("The index for this merchant is " + LastFoundMerchant + " and the merchant name from that index is: " + hiredActors[LastFoundMerchant].GetName())
+    Log(self + "The index for this merchant is " + LastFoundMerchant + " and the merchant name from that index is: " + hiredActors[LastFoundMerchant].GetName())
     FixedProperties.SetNumMerchantsGlobal(-1.0)
     myQuest.UpdateCurrentInstanceGlobal(FixedProperties.aaslrNumberOfMerchants)
     thisMerchant.ClearActorFromAlias()
     (FixedProperties.RemovedMerchantMessageFormList.GetAt(LastFoundMerchant) as Message).Show()
     hiredActors[LastFoundMerchant] = NONE
     NextOpenAlias = LastFoundMerchant
-    Logger("Removed this merchant")
+    Log(self + "Removed this merchant")
 EndFunction
 
 Function RemoveThisDeadDisabledMerchant(BusinessScript thisMerchant, bool isDead)
     LastFoundMerchant = hiredActors.Find(thisMerchant.GetActorReference())
-    Logger("The index for this merchant is " + LastFoundMerchant + " and the merchant name from that index is: " + hiredActors[LastFoundMerchant].GetName())
+    Log(self + "The index for this merchant is " + LastFoundMerchant + " and the merchant name from that index is: " + hiredActors[LastFoundMerchant].GetName())
     FixedProperties.SetNumMerchantsGlobal(-1.0)
     myQuest.UpdateCurrentInstanceGlobal(FixedProperties.aaslrNumberOfMerchants)
     if isDead
@@ -246,23 +228,23 @@ Function RemoveThisDeadDisabledMerchant(BusinessScript thisMerchant, bool isDead
     thisMerchant.ClearActorFromAlias()
     hiredActors[LastFoundMerchant] = NONE
     NextOpenAlias = LastFoundMerchant
-    Logger("Removed this merchant")
+    Log(self + "Removed this merchant")
 EndFunction
 
 Function RemoveAllMerchants()
     int numMerchants = merchantAliases.Length
-    Logger("About to remove all Merchants")
+    Log(self + "About to remove all Merchants")
     Actor thisMerhcant
     While (numMerchants)
         numMerchants -= 1
         thisMerhcant = hiredActors[numMerchants]
         If (thisMerhcant)
-            Logger("About to clear: " + thisMerhcant.GetName())
+            Log(self + "About to clear: " + thisMerhcant.GetBaseObject().GetName())
             merchantAliases[numMerchants].ClearActorFromAlias()
             hiredActors[numMerchants] = NONE
+            FixedProperties.SetNumMerchantsGlobal(-1)
         EndIf
     EndWhile
-    FixedProperties.aaslrNumberOfMerchants.SetValue(0.0)
     NextOpenAlias = 0
     myQuest.UpdateCurrentInstanceGlobal(FixedProperties.aaslrNumberOfMerchants)
     FixedProperties.RemovedAllMerchantsMessage.Show()
@@ -276,15 +258,15 @@ Function ChangeChestType(Actor akMerchant, string chestType)
         BusinessScript merchant = merchantAliases[index]
         If (merchant)            
             success = merchant.changeChestType(chestType)
-            Logger("Chest type changed to: " + chestType)
+            Log(self + "Chest type changed to: " + chestType)
         EndIf
     EndIf
 EndFunction
 
 Function YHShowBarterMenu(Actor akSpeaker)
-    Logger("In YHShowBarterMenu!!!!!")
+    Log(self + "In YHShowBarterMenu!!!!!")
     If (hiredActors.Find(akSpeaker) > -1)
-        Logger("We found the merchant: " + akSpeaker.GetBaseObject().GetName())
+        Log(self + "We found the merchant: " + akSpeaker.GetBaseObject().GetName())
         int index = hiredActors.Find(akSpeaker)
         BusinessScript merchant = merchantAliases[index]
         If (merchant)
@@ -292,7 +274,7 @@ Function YHShowBarterMenu(Actor akSpeaker)
                 FixedProperties.IsManagedMerchantTrading = true
                 merchant.MerchantChestScript.ListenForHotKeys()
             EndIf
-            Logger("BarterMenu actor found: "+ merchant.GetActorName())
+            Log(self + "BarterMenu actor found: "+ merchant.GetActorName())
             merchant.ProxyActor.ShowBarterMenu()
         EndIf
     Else
@@ -300,13 +282,19 @@ Function YHShowBarterMenu(Actor akSpeaker)
     EndIf
 EndFunction
 
+Function SellJunkAuto(Actor akMerchant)
+    If (myQuest as YoureHiredMCM).S_AutoSellJunk
+        SellJunk(akMerchant)
+    EndIf
+endFunction
+
 Function SellJunk(Actor akMerchant)
     If (hiredActors.Find(akMerchant) > -1)
-        Logger("Selling Junk")
         int index = hiredActors.Find(akMerchant)
         int junkPrice = PlayerScript.GetSellCostOfJunk(akMerchant.GetActorBase().GetSex() != PlayerScript.GetActorReference().GetActorBase().GetSex(), merchantAliases[index].MerchantChestScript)
-        Logger("Adding " + junkPrice + " to the player")
         PlayerScript.GetActorReference().additem(FixedProperties.gold, junkPrice)
+        merchantAliases[index].MerchantChestScript.BuyJunk(junkPrice)
+        Log(self + "Adding " + junkPrice + " to the player and removing it from the proxy")
     EndIf
 EndFunction
 
@@ -318,7 +306,7 @@ Function PromoteToFence(Actor akFence)
             newFence.PromoteToFence()
         EndIf
     Else
-        Logger("Actor is not a merchant!!!")
+        Log(self + "Actor is not a merchant!!!")
     EndIf
 EndFunction
 
@@ -338,10 +326,9 @@ EndFunction
 
 bool isWaiting = false
 Function UpdateResetCondtions()
+    Log(self + " We are about to reset everything!!! ")
     If (!isWaiting)
         isWaiting = true
-        Utility.wait(0.1)
-        Logger("We just waited for the menu to close to reset all the things")
         RegisterForSingleUpdate(0.1)
     EndIf
 EndFunction

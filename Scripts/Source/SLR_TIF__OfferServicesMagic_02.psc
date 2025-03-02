@@ -15,7 +15,7 @@ EndFunction
 Function Fragment_4(ObjectReference akSpeakerRef)
 Actor akSpeaker = akSpeakerRef as Actor
 ;BEGIN CODE
-YHMMSOfferServices.SellJunk(akSpeaker)
+YHMMSOfferServices.SellJunkAuto(akSpeaker)
 ;END CODE
 EndFunction
 ;END FRAGMENT

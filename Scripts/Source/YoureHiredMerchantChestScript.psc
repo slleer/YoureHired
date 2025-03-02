@@ -1,6 +1,8 @@
 Scriptname YoureHiredMerchantChestScript extends ObjectReference  
 {For manipulating the merchant chest}
 
+Import YHUtil
+
 YoureHiredMerchantPropertiesScript property FixedProperties auto
 ObjectReference property ProxyActor auto
 int property ResetHotKey auto
@@ -9,18 +11,22 @@ bool property RequireSecondaryHotKey auto
 bool isSecondaryKeyDown = false
 bool isPrimaryKeyDown = false
 bool listeningForGameTime = true
+int itemCountCutOff 
+int goldCountCutOff
 
 int goldReserves = 0
 Form lastForm
 
 Event OnInit()
-    Logger(" In the OnInit ", logType = 2)
+    AddLineBreakWithText(self + " In the OnInit ")
     RegisterForSingleUpdateGameTime((24*FixedProperties.DaysBeforeReset))
+    itemCountCutOff = (self.GetNumItems() * 0.1) as int
+    goldCountCutOff = (self.GetItemCount(FixedProperties.gold) * 0.2) as int
 EndEvent
 
 Event OnUpdateGameTime()
     self.ResetChest(false)
-    Logger("Just reset the chest for: " + ProxyActor.GetBaseObject().GetName())
+    Log(self + "Just reset the chest for: " + ProxyActor.GetBaseObject().GetName())
     RegisterForSingleUpdateGameTime(24*FixedProperties.DaysBeforeReset)
 EndEvent
 
@@ -28,13 +34,13 @@ Event OnKeyDown(int keyCode)
     If (UI.IsTextInputEnabled())
         return
     EndIf
-    Logger("In the onKeyDown event")
+    Log(self + "In the onKeyDown event")
     If (UI.IsMenuOpen("BarterMenu"))
-        Logger("The barter menu is open")
+        Log(self + "The barter menu is open")
         If (Game.UsingGamepad())
             If (keyCode == ResetSecondaryHotKey)
                 If (isPrimaryKeyDown)
-                    Logger("About to reset!")
+                    Log(self + "About to reset!")
                     ResetChest()
                     return
                 EndIf
@@ -42,16 +48,16 @@ Event OnKeyDown(int keyCode)
             EndIf
         EndIf
         If (keyCode == ResetHotKey)
-            Logger("It is our keycode: " + keyCode + ", " + ResetHotKey)
+            Log(self + "It is our keycode: " + keyCode + ", " + ResetHotKey)
             If (RequireSecondaryHotKey)
-                Logger("In required secondary ")
+                Log(self + "In required secondary ")
                 If (Input.IsKeyPressed(ResetSecondaryHotKey))
-                    Logger("in is key pressed")
+                    Log(self + "in is key pressed")
                     ResetChest()
                     return
                 EndIf
                 If (isSecondaryKeyDown)
-                    Logger("About to reset!")
+                    Log(self + "About to reset!")
                     ResetChest()
                     return
                 EndIf
@@ -65,7 +71,7 @@ Event OnKeyDown(int keyCode)
 EndEvent
 
 Event OnKeyUp(int keycode, float holdTime)
-    Logger("We are in the key up event with: " + keycode + ", reset key: " + ResetHotKey + ", reset secondary key: " + ResetSecondaryHotKey)
+    Log(self + "We are in the key up event with: " + keycode + ", reset key: " + ResetHotKey + ", reset secondary key: " + ResetSecondaryHotKey)
     If (UI.IsMenuOpen("BarterMenu"))
         If (keyCode == ResetSecondaryHotKey)
             isSecondaryKeyDown = false
@@ -77,12 +83,12 @@ Event OnKeyUp(int keycode, float holdTime)
 EndEvent
 
 Event OnMenuClose(string openMenu)
-    Logger("The menu that was closed is: " + openMenu)
+    Log(self + "The menu that was closed is: " + openMenu)
     if openMenu == "BarterMenu"
-        Logger("UnRegistering")
+        Log(self + "UnRegistering")
         FixedProperties.IsManagedMerchantTrading = false
         If (FixedProperties.ResetOnMenuClose)
-            Logger("About to reset the chest on menu close")
+            Log(self + "About to reset the chest on menu close")
             self.ResetChest(false)
         EndIf
         UnregisterForAllKeys()
@@ -93,12 +99,12 @@ EndEvent
 Function ListenForHotKeys()
     RegisterForMenu("BarterMenu")
     ResetHotKey = FixedProperties.Hotkey
-    Logger("Registering for Hotkeys: " + ResetHotKey)
+    Log(self + "Registering for Hotkeys: " + ResetHotKey)
     RegisterForKey(ResetHotKey)
     RequireSecondaryHotKey = FixedProperties.RequireTwoKeys
-    Logger("RequiresSecondaryKey: " + RequireSecondaryHotKey)
+    Log(self + "RequiresSecondaryKey: " + RequireSecondaryHotKey)
     If (RequireSecondaryHotKey)
-        Logger("Registering for secondaryHotKey")
+        Log(self + "Registering for secondaryHotKey")
         ResetSecondaryHotKey = FixedProperties.SecondaryHotkey
         RegisterForKey(ResetSecondaryHotKey)
     EndIf
@@ -112,14 +118,14 @@ EndFunction
 
 Function ToggleOnMenuCloseOrGametime()
     if FixedProperties.ResetOnMenuClose
-        Logger("ResetOnMenuClose is true!!")
+        Log(self + "ResetOnMenuClose is true!!")
         If (listeningForGameTime)
             UnregisterForUpdateGameTime()
             listeningForGameTime = false
         EndIf
     else
         if !listeningForGameTime
-            Logger("Listening for gametime update: " + FixedProperties.DaysBeforeReset)
+            Log(self + "Listening for gametime update: " + FixedProperties.DaysBeforeReset)
             RegisterForSingleUpdateGameTime(24*FixedProperties.DaysBeforeReset)
             listeningForGameTime = true
         endIf
@@ -127,7 +133,7 @@ Function ToggleOnMenuCloseOrGametime()
 EndFunction
 
 Function ResetChest(bool resetMenu = true)
-    Logger("About to resest the chest")
+    Log(self + "About to resest the chest")
     self.ResetInventory()
     int moreGold = 175 + Utility.RandomInt()
     AddItem(FixedProperties.gold, moreGold, true)
@@ -138,59 +144,52 @@ Function ResetChest(bool resetMenu = true)
     if resetMenu
         UI.InvokeNumber("BarterMenu", "_root.Menu_mc.doTransaction", 0.0)
     endIf
-    Logger("Just reset the chest for: " + ProxyActor.GetBaseObject().GetName())
+    itemCountCutOff = (self.GetNumItems() * 0.1) as int
+    goldCountCutOff = (self.GetItemCount(FixedProperties.gold) * 0.2) as int
 EndFunction
 
-Function Logger(string textToLog = "", bool logFlag = true, int logType = 1)
-    if logType == 1
-        YHUtil.Log("MerchantChest - " + textToLog, logFlag)
+Function BuyJunk(int amount)
+    int chestGold = GetItemCount(FixedProperties.gold)
+    if amount <= chestGold
+        RemoveItem(FixedProperties.gold, amount)
+        return
     endIf
-    If logType == 2
-        YHUtil.AddLineBreakWithText("MerchantChest - " + textToLog, logFlag)
-    EndIf
-    If logType == 3
-        YHUtil.AddLineBreakGameTimeOptional(logFlag)
-    EndIf
+    ProxyActor.RemoveItem(FixedProperties.gold, amount-chestGold)
+    RemoveItem(FixedProperties.gold, chestGold)
 EndFunction
 
 Event OnItemRemoved(Form akBaseItem, int aiItemCount, ObjectReference akItemReference, ObjectReference akDestContainer)
-    Logger("In the on item REMOVED event", false,  logType = 2)
+    AddLineBreakWithText("In the on item REMOVED event", false)
     If (akDestContainer == Game.GetPlayer() && akBaseItem == FixedProperties.gold as Form)
         If (goldReserves > 0 && GetItemCount(FixedProperties.gold) + goldReserves <= FixedProperties.MaxGoldValue as int)
-            Logger("GoldReservse: " + goldReserves + ", CurrentCount: " + GetItemCount(FixedProperties.gold) + ", proxyactor (" + ProxyActor.GetBaseObject().GetName() + ") gold count: " + ProxyActor.GetItemCount(FixedProperties.gold))
             ProxyActor.RemoveItem(FixedProperties.gold, goldReserves, true, self)
-            Logger("GoldReservse: " + goldReserves + ", CurrentCount: " + GetItemCount(FixedProperties.gold) + ", proxyactor (" + ProxyActor.GetBaseObject().GetName() + ") gold count: " + ProxyActor.GetItemCount(FixedProperties.gold))
             goldReserves = 0
         ElseIf (GetItemCount(FixedProperties.gold) + goldReserves > FixedProperties.MaxGoldValue as int)
             int difference = (FixedProperties.MaxGoldValue as int) - GetItemCount(FixedProperties.gold)
-            Logger("Difference: " + difference + ", currentGold: " + GetItemCount(FixedProperties.gold) + ", proxyactor (" + ProxyActor.GetBaseObject().GetName() + ") gold count: " + ProxyActor.GetItemCount(FixedProperties.gold))
             ProxyActor.RemoveItem(FixedProperties.gold, difference, true, self)
-            Logger("Difference: " + difference + ", currentGold: " + GetItemCount(FixedProperties.gold) + ", proxyactor (" + ProxyActor.GetBaseObject().GetName() + ") gold count: " + ProxyActor.GetItemCount(FixedProperties.gold))
             goldReserves -= difference
         EndIf
     EndIf
     If (FixedProperties.LowCountReset)
-        If self.GetNumItems() < 5
-            Logger("Reseting chest due to low item count")
+        If self.GetNumItems() < itemCountCutOff
+            Log(self + "Reseting chest due to low item count: " + itemCountCutOff)
             ResetChest()
         EndIf
     EndIf
 EndEvent
 
 Event OnItemAdded(Form akBaseItem, int aiItemCount, ObjectReference akItemReference, ObjectReference akSourceContainer)
-    Logger("In item ADDED event", false, logType = 2)
+    AddLineBreakWithText("In item ADDED event", false)
     If (akSourceContainer == Game.GetPlayer() && akBaseItem == FixedProperties.gold as Form)
         If (GetItemCount(FixedProperties.gold) > (FixedProperties.MaxGoldValue as int)) 
             int difference = GetItemCount(FixedProperties.gold) - (FixedProperties.MaxGoldValue as int)
-            Logger("Difference: " + difference + ", currentGold: " + GetItemCount(FixedProperties.gold) + ", proxyactor (" + ProxyActor.GetBaseObject().GetName() + ") gold count: " + ProxyActor.GetItemCount(FixedProperties.gold))
             RemoveItem(FixedProperties.gold, difference, true, ProxyActor)
-            Logger("Difference: " + difference + ", currentGold: " + GetItemCount(FixedProperties.gold) + ", proxyactor (" + ProxyActor.GetBaseObject().GetName() + ") gold count: " + ProxyActor.GetItemCount(FixedProperties.gold))
             goldReserves += difference
         EndIf
     EndIf
     If (FixedProperties.LowCountReset)
-        If self.GetItemCount(FixedProperties.gold) < 150
-            Logger("Reseting chest due to low gold from On Item ADDED")
+        If self.GetItemCount(FixedProperties.gold) < goldCountCutOff
+            Log(self + "Reseting chest due to low gold from On Item ADDED: " + goldCountCutOff)
             ResetChest()
         EndIf
     EndIf

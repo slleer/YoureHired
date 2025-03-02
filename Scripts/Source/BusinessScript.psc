@@ -1,13 +1,18 @@
 Scriptname BusinessScript extends ReferenceAlias
 {This manages actors after they've been added to You're Hired Merchant factions.}
 
+import YHUtil
+
 Faction property YoureHiredFaction auto
+Quest property YoureHired auto
 YoureHiredMerchantPropertiesScript property FixedProperties auto
 ActorBase property  ProxyBase_Male auto
 ActorBase property ProxyBase_Female auto
 ActorBase property ProxyBase_Animal auto
 ObjectReference property ChestXMarker auto
+ObjectReference property SleepLocationMarker auto
 ObjectReference property MapMarker auto
+bool property isAnimal = false auto
 
 Actor property ProxyActor auto
 YoureHiredMerchantChestScript property MerchantChestScript auto
@@ -17,86 +22,104 @@ string _actorName
 string _currentChestType
 bool isVanillaMerchant = false
 ObjectReference invMerchantStandOwned
+ObjectReference invRugSleepMarkerOwned
+Actor playerRef
 
 int jobMerchantFactionRank = 0
+int merchantIndex = -1
 
 string blacksmithChestText = "Blacksmith"
 string potionsChestText = "Apothecary"
 string magicChestText = "Magic"
 string miscChestText = "General Goods"
 string innKeeperChestText = "Innkeeper"
+string tailorJewelerChestText = "Tailor"
+; Used for adding voices types to tailorJeweler chest types
 string jewelerChestText = "Jeweler"
-string tailorJewelerChestText = "TailorJeweler"
 string tailorChestText = "Tailor"
 
 Event OnInit()
-    Logger("In OnInit")
+    Log(self + "In OnInit")
+    playerRef = FixedProperties.PlayerRef
 EndEvent
 
 Event OnReset()
 
-    Logger("We have been reset")
+    Log(self + "We have been reset")
 EndEvent
 
 Event OnDeath(Actor akKiller)
     If (GetActorReference().IsDead())
-        YHUtil.Log(self + " The actor has been killed")
         string deadMerchant = GetActorName()
         FixedProperties.MerchantManager.RemoveThisDeadDisabledMerchant(self, true)
-        YHUtil.Log(self + " " + deadMerchant + " was removed.")
     EndIf
 EndEvent
 
 Event OnUnload()
-    YHUtil.Log(self + " In OnUnload ")
+    Log(self + " In OnUnload ")
     If (GetActorReference().IsDisabled())
-        YHUtil.Log(self + " Actor is disabled OH NO!!")
         FixedProperties.MerchantManager.RemoveThisDeadDisabledMerchant(self, false)
-        YHUtil.Log(self + " The disabled actor has been removed!!! ")
         return
     EndIf
     If (GetActorReference().IsDeleted())
-        YHUtil.Log(self + " ACtor has been deleted!!!! WAHH NAIGH")
         FixedProperties.MerchantManager.RemoveThisDeadDisabledMerchant(self, false)
-        YHUtil.Log(self + " The deleted actor has been removed!!! ")
         return
     EndIf
+    ProxyActorFactionRecheck()
 EndEvent
 
-; calles logger with some preformating 1:Log, 2:LineBreakTEXT, 3:LineBreakGAMETIME
-Function Logger(string textToLog = "", bool logFlag = true, int logType = 1)
-    if logType == 1
-        YHUtil.Log("Business Script Redux - " + textToLog, logFlag)
+Event OnGainLOS(Actor akViewer, ObjectReference akTarget)
+    if akTarget.GetDistance(akViewer) < 384 ; approx 18 feet (128 = 6')
+        int stage = (merchantIndex + 1) * 10
+        YoureHired.SetObjectiveCompleted(stage, true)
+        YoureHired.SetObjectiveDisplayed(stage, false)
+        YoureHired.SetStage(0)
+        (YoureHired as YoureHiredMCM).MM_LocateMerchant = false
+        return
     endIf
-    If logType == 2
-        YHUtil.AddLineBreakWithText("Business Script Redux - " + textToLog, logFlag)
-    EndIf
-    If logType == 3
-        YHUtil.AddLineBreakGameTimeOptional(logFlag)
-    EndIf
-EndFunction
+    RegisterForSingleLOSGain(playerRef, GetActorReference())
+EndEvent
 
 ; Empty state declaration
 ;change the faction's container to chestType
 Function ChangeChestType(string chestType)
-    Logger("In the empty state")
+    Log(self + "In the empty state")
+EndFunction
+
+Function SetMerchantIndex(int index)
+    merchantIndex = index
+EndFunction
+
+int Function GetMerchantIndex()
+    return merchantIndex
+EndFunction
+
+bool Function GetIsVanillaMerchant()
+    return isVanillaMerchant
+endFunction
+
+int Function GetJobMerchantFactionRank()
+    return jobMerchantFactionRank
+EndFunction
+
+Function SetJobMerchantFactionRank(int rank)
+    jobMerchantFactionRank = rank
 EndFunction
 
 ;State to start in so don't delete the bank chest
 Auto State BlankChestState
     ;change the faction's container to chestType.
     Function ChangeChestType(string chestType)
-        Logger(" in default state change chest type function ", logType = 2)
+        AddLineBreakWithText(self + " in default state change chest type function ")
         Form newContainer
         if chestType == "Random"
             newContainer = FixedProperties.GetRandomChestType()
             chestType = newContainer.GetName()
-            Logger("Random chest is: " + chestType)
         else
             newContainer = FixedProperties.getChestBase(chestType)
         endIf
         ObjectReference newContainerRef = ChestXMarker.PlaceAtMe(newContainer, abForcePersist = true)
-        Logger("newContainerRef: " + newContainerRef)
+        Log(self + "newContainerRef: " + newContainerRef)
         MerchantChestScript = (newContainerRef as YoureHiredMerchantChestScript)
         _currentChestType = chestType
         MerchantChestScript.ProxyActor = ProxyActor
@@ -106,7 +129,6 @@ Auto State BlankChestState
             newContainerRef.AddItem(FixedProperties.gold, moreGold, true)
             YoureHiredFaction.SetMerchantContainer(newContainerRef)
             newContainerRef.SetActorOwner(ProxyActor.GetBaseObject() as ActorBase)
-            Logger("newContainerRef.GetActorOwner(): " + newContainerRef.GetActorOwner())
             addJobTypeFaction(chestType)
         EndIf
         GoToState("DisposeChestState")
@@ -116,21 +138,18 @@ EndState
 State DisposeChestState
     ;change the faction's container and disable/delete the previous one
     Function ChangeChestType(string chestType)
-        Logger(" in Dispose state change chest type function ", logType = 2)
+        AddLineBreakWithText(self + " in Dispose state change chest type function, chestType: " + chestType)
         Form newContainer
         if chestType == "Random"
             newContainer = FixedProperties.GetRandomChestType()
             chestType =newContainer.GetName()
-            Logger("Random chest is: " + chestType)
         else
-            Logger("The chest type is: " + chestType)
             newContainer = FixedProperties.getChestBase(chestType)
         endIf
         ObjectReference oldContainer = YoureHiredFaction.GetMerchantContainer()
         string oldChestType = oldContainer.GetDisplayName()
         if oldChestType != chestType
             ObjectReference newContainerRef = ChestXMarker.PlaceAtMe(newContainer, abForcePersist = true)
-            Logger("newContainerRef: " + newContainerRef)
             MerchantChestScript.StopListeningAll()
             MerchantChestScript = (newContainerRef as YoureHiredMerchantChestScript)
             _currentChestType = chestType
@@ -159,6 +178,20 @@ string Function GetActorName()
     return _actorName
 EndFunction
 
+int Function LocateMerchant(bool locate = true)
+    int stage = (merchantIndex + 1) * 10
+    if  locate
+        YoureHired.SetObjectiveDisplayed(stage, true, true)
+        YoureHired.SetStage(stage)
+        RegisterForSingleLOSGain(playerRef, GetActorReference())
+    else
+        YoureHired.SetObjectiveDisplayed(stage, false)
+        YoureHired.SetStage(0)
+        UnregisterForLOS(playerRef, GetActorReference())
+    endIf
+    return stage
+EndFunction
+
 ;retrieves the current chest type
 string Function GetChestType()
     return _currentChestType
@@ -182,21 +215,31 @@ bool Function FillAliasWithActor(Actor akMerchant)
         _actorName = akMerchant.GetBaseObject().GetName()
         FillProxy(akMerchant)
         ChangeChestType("Random")
-        If !invMerchantStandOwned
+
+        If (!isAnimal)
             invMerchantStandOwned = FixedProperties.GetInventoryStand()
             invMerchantStandOwned.SetDisplayName(_actorName + "'s Merchant Stall")
             (invMerchantStandOwned as InvItemScript).SetOwningMerchant(self)
             ProxyActor.AddItem(invMerchantStandOwned,1,true)
-        else
-            invMerchantStandOwned.SetDisplayName(_actorName + "'s Merchant Stall")
+            
+            invRugSleepMarkerOwned = FixedProperties.GetInvRugSleepMarker()
+            invRugSleepMarkerOwned.SetDisplayName(_actorName + "'s Home Warming Rug")
+            (invRugSleepMarkerOwned as RugInvItemScript).SetOwningMerchant(self)
+            ProxyActor.AddItem(invRugSleepMarkerOwned, 1, true)
+            ; If !invMerchantStandOwned
+            ; else
+            ;     invMerchantStandOwned.SetDisplayName(_actorName + "'s Merchant Stall")
+            ; EndIf
         EndIf
-        ; (invMerchantStandOwned as InvItemScript)).SetIsChild(akMerchant.IsChild())
 
         if akMerchant.IsInFaction(FixedProperties.JobMerchantFaction)
-            jobMerchantFactionRank = akMerchant.GetFactionRank(FixedProperties.JobMerchantFaction)
             isVanillaMerchant = true
-            akMerchant.RemoveFromFaction(FixedProperties.JobMerchantFaction)
+            If !(YoureHired as YoureHiredMCM).S_DoubleMerchantEnabled
+                jobMerchantFactionRank = akMerchant.GetFactionRank(FixedProperties.JobMerchantFaction)
+                akMerchant.RemoveFromFaction(FixedProperties.JobMerchantFaction)
+            EndIf
         endIf
+        
 
     endIf
     return success
@@ -206,12 +249,16 @@ Function ClearActorFromAlias()
     ResetFactionContainer()
     _actorName = ""
     ResetProxy()
+    isAnimal = false
+    SendRugSelfDestruct()
     SendStallSelfDestruct()
     PromoteToFence(true)
     ClearJobTypeFactions()
     if isVanillaMerchant
-        GetActorReference().AddToFaction(FixedProperties.JobMerchantFaction)    
-        GetActorReference().SetFactionRank(FixedProperties.JobMerchantFaction, jobMerchantFactionRank)
+        If !(YoureHired as YoureHiredMCM).S_DoubleMerchantEnabled
+            GetActorReference().AddToFaction(FixedProperties.JobMerchantFaction)    
+            GetActorReference().SetFactionRank(FixedProperties.JobMerchantFaction, jobMerchantFactionRank)
+        EndIf
         isVanillaMerchant = false
     endIf
     self.Clear()
@@ -219,7 +266,6 @@ EndFunction
 ;creates an instance of the proxy actor and names it after the new merchant
 Function FillProxy(Actor proxy)
     int sex = proxy.GetActorBase().GetSex()
-    Logger("merchant sex: " + sex + ", merchant race: " + proxy.GetRace())
     If (sex == 0)
         ProxyActor = ChestXMarker.PlaceAtMe(ProxyBase_Male, abForcePersist = true) as Actor
     ElseIf (sex == 1)
@@ -229,19 +275,13 @@ Function FillProxy(Actor proxy)
     EndIf
     ProxyActor.SetRace(proxy.GetRace())
     ProxyActor.EnableAI(false)
-    Logger("Placed and moved the proxy actor")
-    Faction[] proxyFactions = proxy.GetFactions(-120,120)
-    int index = 0
-    While index < proxyFactions.Length
-        If (FixedProperties.PlayerRef.IsInFaction(proxyFactions[index]))
-            ProxyActor.AddToFaction(proxyFactions[index])
-            ProxyActor.SetFactionRank((proxyFactions[index]), proxy.GetFactionRank(proxyFactions[index]))
-        EndIf
-        index += 1
-    EndWhile
-    int relationshipRank = proxy.GetRelationshipRank(FixedProperties.PlayerRef)
-    ProxyActor.SetRelationshipRank(FixedProperties.PlayerRef, relationshipRank)
-    Logger("Added proxy to necessary factions and set relationship rank")
+    
+    ProxyActor.GetBaseObject().SetName(_actorName)
+    If (FixedProperties.aaslrAnimalVoiceTypes.HasForm(proxy.GetVoiceType()))
+        isAnimal = true
+    EndIf
+    Log(self + "Placed and moved the proxy actor")
+    ProxyActorFactionRecheck()
 EndFunction
 ;Disables and deletes the proxy instance
 Function ResetProxy()
@@ -262,11 +302,9 @@ Function ClearJobTypeFactions()
         thisFaction = merchant.GetFactions(-123,123)[numFactions]
         If (FixedProperties.JobTypesFactionList.HasForm(thisFaction as Form))
             success = self.TryToRemoveFromFaction(thisFaction)
-            Logger("Faction : " + thisFaction.GetName() + " removed successfully: " + success)
         EndIf
         If (FixedProperties.aaslrYoureHiredVoiceTypeJobFactionsFormList.HasForm(thisFaction as Form))
             success = self.TryToRemoveFromFaction(thisFaction)
-            Logger("Faction : " + thisFaction.GetName() + " removed successfully: " + success)
         EndIf
     endWhile
 EndFunction
@@ -275,10 +313,24 @@ ObjectReference Function GetMerchnatStandInventoryItem()
     return invMerchantStandOwned
 EndFunction
 
+Function SendRugSelfDestruct()
+    if invRugSleepMarkerOwned
+        playerRef.RemoveItem(invRugSleepMarkerOwned, 1)
+        invRugSleepMarkerOwned = NONE
+        return
+    endIf
+    int handle = ModEvent.Create("aaslrYH_RugSelfDestruct")
+    if handle
+        ModEvent.PushForm(handle, YoureHiredFaction)
+        ModEvent.Send(handle)
+    endIf
+EndFunction
+
 Function SendStallSelfDestruct()
     If invMerchantStandOwned
-        invMerchantStandOwned.SetDisplayName("Merchant Stall")
-        (invMerchantStandOwned as InvItemScript).ClearOwningMerchant()
+        ; invMerchantStandOwned.SetDisplayName("Merchant Stall")
+        ; (invMerchantStandOwned as InvItemScript).ClearOwningMerchant()
+        playerRef.RemoveItem(invMerchantStandOwned, 1)
         invMerchantStandOwned = NONE
         return
     EndIf
@@ -288,11 +340,20 @@ Function SendStallSelfDestruct()
             ModEvent.PushForm(handle, YoureHiredFaction)
             ModEvent.Send(handle)
         endIf
+        return
+    else
+        MapMarker.Disable()
+        FixedProperties.MerchantStall_PackageEnable[merchantIndex].SetValueInt(0)
+        YoureHired.UpdateCurrentInstanceGlobal(FixedProperties.MerchantStall_PackageEnable[merchantIndex])
     endIf
 EndFunction
 
 Function ClearInventoryMerchantStall()
     invMerchantStandOwned = NONE
+EndFunction
+
+Function ClearInventoryRug()
+    invRugSleepMarkerOwned = NONE
 EndFunction
 
 Function SetInventoryMerchantStall(ObjectReference newStall)
@@ -302,7 +363,7 @@ EndFunction
 
 ; Sets faction to accept stolen goods or not
 Function PromoteToFence(bool setDefault = false)
-    Logger("In Promote to fence", logType = 2)
+    AddLineBreakWithText(self + "In Promote to fence")
     if setDefault
         YoureHiredFaction.SetOnlyBuysStolenItems(false)
         RemoveJobTypeFaction("Fence")
@@ -321,114 +382,114 @@ Function PromoteToFence(bool setDefault = false)
     endIf
 EndFunction
 
+Function ProxyActorFactionRecheck()
+    Faction[] proxyFactions = GetActorReference().GetFactions(-120,120)
+    int index = 0
+    While index < proxyFactions.Length
+        If (playerRef.IsInFaction(proxyFactions[index]))
+            ProxyActor.AddToFaction(proxyFactions[index])
+            ProxyActor.SetFactionRank((proxyFactions[index]), GetActorReference().GetFactionRank(proxyFactions[index]))
+        EndIf
+        index += 1
+    EndWhile
+    int relationshipRank = GetActorReference().GetRelationshipRank(playerRef)
+    ProxyActor.SetRelationshipRank(playerRef, relationshipRank)
+    Log(self + "Added proxy to necessary factions and set relationship rank")
+EndFunction
+
+
 ;Remove the jobTypeFaction that matches the passed in string
 Function RemoveJobTypeFaction(string chestType)
-    Logger("Chest type in removeJobTypeFaction: " + chestType)
+    Log(self + "Chest type in removeJobTypeFaction: " + chestType)
     bool success
     bool voiceAdded
     Faction oldFaction = FixedProperties.GetFactionByString(chestType)
     success = self.TryToRemoveFromFaction(oldFaction)
-    Logger("old faction being removed: " + oldFaction.GetName() + " success: " + success)
     oldFaction = NONE
     if chestType == blacksmithChestText
         If FixedProperties.aaslrVoicesBlacksmith.HasForm(self.GetActorReference().GetVoiceType() as Form)
             oldFaction = FixedProperties.GetVoiceTypeFactionByString(chestType)
             voiceAdded = self.TryToRemoveFromFaction(oldFaction)
-            Logger("voiceTypeFaction removed: " + oldFaction.GetName() + " : " + voiceAdded)
         EndIf
     elseIf chestType == potionsChestText
         If FixedProperties.aaslrVoicesApothecary.HasForm(self.GetActorReference().GetVoiceType() as Form)
             oldFaction = FixedProperties.GetVoiceTypeFactionByString(chestType)
             voiceAdded = self.TryToRemoveFromFaction(oldFaction)
-            Logger("voiceTypeFaction removed: " + oldFaction.GetName() + " : " + voiceAdded)
         EndIf
     elseif chestType == innKeeperChestText
         If FixedProperties.aaslrVoicesTownInnkeeper.HasForm(self.GetActorReference().GetVoiceType() as Form)
             oldFaction = FixedProperties.GetVoiceTypeFactionByString(chestType)
             voiceAdded = self.TryToRemoveFromFaction(oldFaction)
-            Logger("voiceTypeFaction removed: " + oldFaction.GetName() + " : " + voiceAdded)
         EndIf
     elseif chestType == miscChestText
         If FixedProperties.aaslrVoicesMisc.HasForm(self.GetActorReference().GetVoiceType() as Form)
             oldFaction = FixedProperties.GetVoiceTypeFactionByString(chestType)
             voiceAdded = self.TryToRemoveFromFaction(oldFaction)
-            Logger("voiceTypeFaction removed: " + oldFaction.GetName() + " : " + voiceAdded)
         EndIf
     elseif chestType == magicChestText
         If FixedProperties.aaslrVoicesMagic.HasForm(self.GetActorReference().GetVoiceType() as Form)
             oldFaction = FixedProperties.GetVoiceTypeFactionByString(chestType)
             voiceAdded = self.TryToRemoveFromFaction(oldFaction)
-            Logger("voiceTypeFaction removed: " + oldFaction.GetName() + " : " + voiceAdded)
         EndIf
     elseif chestType == tailorJewelerChestText
         If FixedProperties.aaslrVoicesTailor.HasForm(self.GetActorReference().GetVoiceType() as Form)
             oldFaction = FixedProperties.GetVoiceTypeFactionByString(tailorChestText)
             voiceAdded = self.TryToRemoveFromFaction(oldFaction)
-            Logger("voiceTypeFaction removed: " + oldFaction.GetName() + " : " + voiceAdded)
         EndIf
         If FixedProperties.aaslrVoicesJeweler.HasForm(self.GetActorReference().GetVoiceType() as Form)
             oldFaction = FixedProperties.GetVoiceTypeFactionByString(jewelerChestText)
             voiceAdded = self.TryToRemoveFromFaction(oldFaction)
-            Logger("voiceTypeFaction removed: " + oldFaction.GetName() + " : " + voiceAdded)
         EndIf
     endIf
     
 EndFunction
 
 Function AddJobTypeFaction(string chestType)
-    Logger("Chest type in AddJobTypeFaction: " + chestType)
+    Log(self + "Chest type in AddJobTypeFaction: " + chestType)
     bool success
     bool voiceAdded
     Faction newFaction = FixedProperties.GetFactionByString(chestType)
     success =  self.TryToAddToFaction(newFaction)
-    Logger("New Faction being added: " + newFaction.GetName() + " success: " + success)
     newFaction = NONE
     if chestType == blacksmithChestText
-        Logger(chestType + " " + blacksmithChestText)
+        Log(self + chestType + " " + blacksmithChestText)
         If FixedProperties.aaslrVoicesBlacksmith.HasForm(self.GetActorReference().GetVoiceType() as Form)
             newFaction = FixedProperties.GetVoiceTypeFactionByString(chestType)
             voiceAdded = self.TryToAddToFaction(newFaction)
-            Logger("voice Faction added: " + newFaction.GetName() + " success: " + voiceAdded)
         EndIf
     elseIf chestType == potionsChestText
-        Logger(chestType + " " + potionsChestText)
+        Log(self + chestType + " " + potionsChestText)
         If FixedProperties.aaslrVoicesApothecary.HasForm(self.GetActorReference().GetVoiceType() as Form)
             newFaction = FixedProperties.GetVoiceTypeFactionByString(chestType)
             voiceAdded = self.TryToAddToFaction(newFaction)
-            Logger("voice Faction added: " + newFaction.GetName() + " success: " + voiceAdded)
         EndIf
     elseif chestType == innKeeperChestText
-        Logger(chestType + " " + innKeeperChestText)
+        Log(self + chestType + " " + innKeeperChestText)
         If FixedProperties.aaslrVoicesTownInnkeeper.HasForm(self.GetActorReference().GetVoiceType() as Form)
             newFaction = FixedProperties.GetVoiceTypeFactionByString(chestType)
             voiceAdded = self.TryToAddToFaction(newFaction)
-            Logger("voice Faction added: " + newFaction.GetName() + " success: " + voiceAdded)
         EndIf
     elseif chestType == miscChestText
-        Logger(chestType + " " + miscChestText)
+        Log(self + chestType + " " + miscChestText)
         If FixedProperties.aaslrVoicesMisc.HasForm(self.GetActorReference().GetVoiceType() as Form)
             newFaction = FixedProperties.GetVoiceTypeFactionByString(chestType)
             voiceAdded = self.TryToAddToFaction(newFaction)
-            Logger("voice Faction added: " + newFaction.GetName() + " success: " + voiceAdded)
         EndIf
     elseif chestType == magicChestText
-        Logger(chestType + " " + magicChestText)
+        Log(self + chestType + " " + magicChestText)
         If FixedProperties.aaslrVoicesMagic.HasForm(self.GetActorReference().GetVoiceType() as Form)
             newFaction = FixedProperties.GetVoiceTypeFactionByString(chestType)
             voiceAdded = self.TryToAddToFaction(newFaction)
-            Logger("voice Faction added: " + newFaction.GetName() + " success: " + voiceAdded)
         EndIf
     elseif chestType == tailorJewelerChestText
-        Logger(chestType + " " + tailorJewelerChestText)
+        Log(self + chestType + " " + tailorJewelerChestText)
         If FixedProperties.aaslrVoicesTailor.HasForm(self.GetActorReference().GetVoiceType() as Form)
             newFaction = FixedProperties.GetVoiceTypeFactionByString(tailorChestText)
             voiceAdded = self.TryToAddToFaction(newFaction)
-            Logger("voice Faction added: " + newFaction.GetName() + " success: " + voiceAdded)
         EndIf
         If FixedProperties.aaslrVoicesJeweler.HasForm(self.GetActorReference().GetVoiceType() as Form)
             newFaction = FixedProperties.GetVoiceTypeFactionByString(jewelerChestText)
             voiceAdded = self.TryToAddToFaction(newFaction)
-            Logger("voice Faction added: " + newFaction.GetName() + " success: " + voiceAdded)
         EndIf
     endIf
     

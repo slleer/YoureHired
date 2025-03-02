@@ -1,6 +1,8 @@
 Scriptname YoureHiredMCM_SettingsPage  Hidden 
 {Creates the Settings page for the MCM}
 
+Import YHUtil
+
 string Function GetPageName() global
     return "Settings"
 EndFunction
@@ -52,9 +54,8 @@ EndFunction
 Function RIGHT(YoureHiredMCM mcm) global
     mcm.AddHeaderOption("Dialogue & Messages")
     ; mcm.AddEmptyOption()
-    mcm.oid_Settings_FenceEnabled = mcm.AddToggleOption("Make Fence", mcm.S_fenceEnabled)
-    mcm.oid_Settings_RecruitmentEnabled = mcm.AddToggleOption("Add Merchant", mcm.S_recruitmentEnabled)
-    ; mcm.oid_Settings_RepeatEnabled = mcm.AddToggleOption("Same Merchant Type", mcm.S_repeatEnabled)
+    mcm.oid_Settings_FenceEnabled = mcm.AddToggleOption("Make Fence", mcm.S_FenceDialogueEnabled)
+    ; mcm.oid_Settings_RecruitmentEnabled = mcm.AddToggleOption("Add Merchant", mcm.S_recruitmentEnabled)
     mcm.oid_Settings_ResetVanillaEnabled = mcm.AddToggleOption("Reset Non Managed Merchants", mcm.S_resetVanillaEnabled)
     mcm.oid_Settings_ShowDropMessage = mcm.AddToggleOption("Show Drop Message", mcm.S_ShowDropMessage)
     
@@ -62,20 +63,17 @@ Function RIGHT(YoureHiredMCM mcm) global
     mcm.AddHeaderOption("General Merchant Settings")
     mcm.oid_Settings_OverStockedMerchants = mcm.AddToggleOption("Overstocked Merchant Inventory", mcm.S_OverStockedEnabled)
     mcm.oid_Settings_ExtraStartingGold = mcm.AddSliderOption("Increase Mechant Gold", mcm.S_ExtraStartingGold, "By {0}")
-    mcm.oid_Settings_MaxGoldInChest = mcm.AddSliderOption("Merchant Keeps Gold", mcm.S_MaxGoldInChest, "When Above {0}")
-    mcm.oid_Settings_DestroyOnRemoval = mcm.AddToggleOption("Destroy On Dismiss", mcm.S_DestroyOnRemoval)
+    ; mcm.oid_Settings_MaxGoldInChest = mcm.AddSliderOption("Merchant Keeps Gold", mcm.S_MaxGoldInChest, "When Above {0}")
+    mcm.oid_Settings_DoubleMerchantEnabled = mcm.AddToggleOption("Double Merchant", mcm.S_DoubleMerchantEnabled)
+    mcm.oid_Settings_AutoSellJunk = mcm.AddToggleOption("Automatically Sell Junk", mcm.S_AutoSellJunk)
+    ; mcm.oid_Settings_DestroyOnRemoval = mcm.AddToggleOption("Destroy On Dismiss", mcm.S_DestroyOnRemoval)
 EndFunction
 
 Function OnSelect(YoureHiredMCM mcm, int optionId) global
     If (optionId == mcm.oid_Settings_FenceEnabled)
-        If (!mcm.S_fenceEnabled)
-            mcm.FixedProperties.aaslrFenceWantedFlag.SetValue(1.0)
-        Else
-            mcm.FixedProperties.aaslrFenceWantedFlag.SetValue(0.0)
-        EndIf
-        mcm.S_fenceEnabled = !mcm.S_fenceEnabled
-        mcm.SetToggleOptionValue(mcm.oid_Settings_FenceEnabled, mcm.S_fenceEnabled)
-        Logger("Fence Enabled: " + mcm.FixedProperties.aaslrFenceWantedFlag.GetValue())
+        mcm.S_FenceDialogueEnabled = !mcm.S_FenceDialogueEnabled
+        mcm.SetToggleOptionValue(mcm.oid_Settings_FenceEnabled, mcm.S_FenceDialogueEnabled)
+        Log("MCM_SettingsPage - " + "Fence Enabled: " + mcm.S_FenceDialogueEnabled)
     ElseIf (optionId == mcm.oid_Settings_ResetOnMenuClose)
         mcm.S_ResetOnMenuClose = !mcm.S_ResetOnMenuClose
         mcm.FixedProperties.ResetOnMenuClose = mcm.S_ResetOnMenuClose
@@ -90,22 +88,13 @@ Function OnSelect(YoureHiredMCM mcm, int optionId) global
         mcm.SetToggleOptionValue(optionId, mcm.S_ResetOnMenuClose, true)
         mcm.SetOptionFlags(mcm.oid_Settings_DaysBetweenReset, flag)
     ElseIf (optionId == mcm.oid_Settings_RecruitmentEnabled)
-        If (!mcm.S_RecruitmentEnabled)
-            mcm.FixedProperties.aaslrNowHiringFlagGlobal.SetValue(1.0)
-            mcm.FixedProperties.aaslrNowHiringFlagGlobal.SetValue(0.0)
-        EndIf
         mcm.S_RecruitmentEnabled = !mcm.S_RecruitmentEnabled
         mcm.SetToggleOptionValue(mcm.oid_Settings_RecruitmentEnabled, mcm.S_RecruitmentEnabled)
-        Logger("Now Hiring!: " + mcm.FixedProperties.aaslrNowHiringFlagGlobal.GetValue())
-    ElseIf (optionId == mcm.oid_Settings_RepeatEnabled)
-        If (!mcm.S_RepeatEnabled)
-            mcm.FixedProperties.aaslrRepeatCustomerFlagGlobal.SetValueInt(1)
-        Else
-            mcm.FixedProperties.aaslrNowHiringFlagGlobal.SetValueInt(0)
-        EndIf
-        mcm.S_RepeatEnabled = !mcm.S_RepeatEnabled
-        mcm.SetToggleOptionValue(mcm.oid_Settings_RepeatEnabled, mcm.S_RepeatEnabled)
-        Logger("Repeat Customer: " + mcm.FixedProperties.aaslrNowHiringFlagGlobal.GetValueInt())
+    ElseIf (optionId == mcm.oid_Settings_DoubleMerchantEnabled)
+        mcm.S_DoubleMerchantEnabled = !mcm.S_DoubleMerchantEnabled
+        mcm.SetToggleOptionValue(mcm.oid_Settings_DoubleMerchantEnabled, mcm.S_DoubleMerchantEnabled)
+        mcm.FixedProperties.SetUpdateVanillaMerchantFaction()
+        mcm.FixedProperties.MerchantManager.UpdateResetCondtions()
     ElseIf (optionId == mcm.oid_Settings_ResetVanillaEnabled)
         If (!mcm.S_ResetVanillaEnabled)
             mcm.FixedProperties.aaslrResetVanillaFlagGlobal.SetValue(1.0)
@@ -114,7 +103,7 @@ Function OnSelect(YoureHiredMCM mcm, int optionId) global
         EndIf
         mcm.S_ResetVanillaEnabled = !mcm.S_ResetVanillaEnabled
         mcm.SetToggleOptionValue(mcm.oid_Settings_ResetVanillaEnabled, mcm.S_ResetVanillaEnabled)
-        Logger("Reset Vanilla: " + mcm.FixedProperties.aaslrResetVanillaFlagGlobal.GetValue())
+        Log("MCM_SettingsPage - "+ "Reset Vanilla: " + mcm.FixedProperties.aaslrResetVanillaFlagGlobal.GetValue())
     ElseIf (optionId == mcm.oid_SettingS_AllowChildren)
         If (mcm.S_AllowChildren)
             mcm.FixedProperties.aaslrAllowChildrenFlag.SetValue(2.0)
@@ -123,7 +112,7 @@ Function OnSelect(YoureHiredMCM mcm, int optionId) global
         EndIf
         mcm.S_AllowChildren = !mcm.S_AllowChildren
         mcm.SetToggleOptionValue(mcm.oid_SettingS_AllowChildren, mcm.S_AllowChildren)
-        Logger("AllowChildrenFlag:" + mcm.FixedProperties.aaslrAllowChildrenFlag.GetValue())
+        Log("MCM_SettingsPage - "+ "AllowChildrenFlag:" + mcm.FixedProperties.aaslrAllowChildrenFlag.GetValue())
     ElseIf (optionId == mcm.oid_SettingS_AllowAnimals)
         If (mcm.S_AllowAnimals)
             mcm.FixedProperties.aaslrallowBeastsFlag.SetValue(2.0)
@@ -132,7 +121,7 @@ Function OnSelect(YoureHiredMCM mcm, int optionId) global
         EndIf     
         mcm.S_AllowAnimals = !mcm.S_AllowAnimals
         mcm.SetToggleOptionValue(mcm.oid_SettingS_AllowAnimals, mcm.S_AllowAnimals)
-        Logger("AllowAnimalFlag:" + mcm.FixedProperties.aaslrallowBeastsFlag.GetValue())
+        Log("MCM_SettingsPage - "+ "AllowAnimalFlag:" + mcm.FixedProperties.aaslrallowBeastsFlag.GetValue())
     ElseIf (optionId == mcm.oid_Settings_EnableHotKeyUse)
         mcm.S_EnableHotKeyUse = !mcm.S_EnableHotKeyUse
         mcm.SetToggleOptionValue(mcm.oid_Settings_EnableHotKeyUse, mcm.S_EnableHotKeyUse, true)
@@ -157,9 +146,11 @@ Function OnSelect(YoureHiredMCM mcm, int optionId) global
     ElseIf (optionId == mcm.oid_Settings_OverStockedMerchants)
         mcm.S_OverStockedEnabled = !mcm.S_OverStockedEnabled
         mcm.SetToggleOptionValue(optionId, mcm.S_OverStockedEnabled)
-        mcm.FixedProperties.OverStockedcMerchant = mcm.S_OverStockedEnabled
         mcm.FixedProperties.SetNeedToUpdateMerchantChests()
         mcm.FixedProperties.MerchantManager.UpdateResetCondtions()
+    ElseIf (optionId == mcm.oid_Settings_AutoSellJunk)
+        mcm.S_AutoSellJunk = !mcm.S_AutoSellJunk
+        mcm.SetToggleOptionValue(optionId, mcm.S_AutoSellJunk)
     EndIf    
 EndFunction ; OnSelect
 
@@ -193,10 +184,10 @@ Function OnHighlight(YoureHiredMCM mcm, int optionId) global
         mcm.SetInfoText("Adds dialogue to managed merchants to make them into a Fence (will buy stolen items). [Default off].")
     ElseIf (optionId == mcm.oid_Settings_RecruitmentEnabled)
         mcm.SetInfoText("All NPC's that can be a merchant will have the 'Interested in becoming a merchant?' Dialogue option. This is an alternative to using the spell or wearing the Merchant Hat! [Default off]")
-    ElseIf (optionId == mcm.oid_Settings_RepeatEnabled)
-        mcm.SetInfoText("When managing existing merchants, this option will display the existing merchant's store type as a choice for it's managed store. Example: would allow Adrianne Avenicci to sell blacksmith supplies through this mod. [Default off]")
+    ElseIf (optionId == mcm.oid_Settings_DoubleMerchantEnabled)
+        mcm.SetInfoText("When adding existing merchants into merchant slot, if enabled, you will be able to access both the existing store (what have you got for sale) and the manged store (what else have you got for sale). When disabled, only the managed store is availbe. [Default off]")
     ElseIf (optionId == mcm.oid_Settings_ResetVanillaEnabled)
-        mcm.SetInfoText("Adds dialogue to reset the inventory of all non managed merchants. NOTE: For non managed merchants with two inventories (Adrianne Avanicci), both are reset. [Default off]")
+        mcm.SetInfoText("Adds dialogue to reset the inventory of all non managed merchants. NOTE: For non managed merchants with two inventories (example: Adrianne Avanicci), both are reset. [Default off]")
     ElseIf (optionId == mcm.oid_SettingS_AllowChildren)
         mcm.SetInfoText("Allows children to become merchants [Default off]")
     ElseIf (optionId == mcm.oid_SettingS_AllowAnimals)
@@ -226,7 +217,7 @@ Function OnHighlight(YoureHiredMCM mcm, int optionId) global
     ElseIf (optionId == mcm.oid_Settings_ResetOnMenuClose)
         mcm.SetInfoText("Enable to have a managed merchant's chest reset after exiting barter menu. Will also disable auto reset every " + mcm.S_NumDaysBetweenReset + " days. [Default off]")
     ElseIf (optionId == mcm.oid_Settings_LowCountReset)
-        mcm.SetInfoText("When enabled, mangaged merchant's inventory will reset when they have fewer than 6 items or less than 150 gold. [Default off]")
+        mcm.SetInfoText("When enabled, mangaged merchant's inventory will reset when they have fewer than 10% of the number of different items or less than 20% of gold. [Default off]")
     ElseIf (optionId == mcm.oid_Settings_ShowDropMessage)
         mcm.SetInfoText("When enabled, a warning message will show when trying to drop a merchant's stall from inventory. [Default on]")
     ElseIf (optionId == mcm.oid_Settings_DestroyOnRemoval)
@@ -235,43 +226,38 @@ Function OnHighlight(YoureHiredMCM mcm, int optionId) global
         mcm.SetInfoText("Adds a number of items to each managed merchant type [Default off]")
     ElseIf (optionId == mcm.oid_Settings_ExtraStartingGold)
         mcm.SetInfoText("Increase this merchants base gold amount by the selected amount. [Default 0]")
-    ElseIf (optionId == mcm.oid_Settings_MaxGoldInChest)
-        mcm.SetInfoText("Any gold above this amount in a managed merchant's inventory will remain when reseting their inventory or changing merchant types. This also allows a merchant's gold to grow beyond 32000 without issue. [Default 6800]")
+    ; ElseIf (optionId == mcm.oid_Settings_MaxGoldInChest)
+    ;     mcm.SetInfoText("Any gold above this amount in a managed merchant's inventory will remain when reseting their inventory or changing merchant types. This also allows a merchant's gold to grow beyond 32000 without issue. [Default 6800]")
+    ElseIf (optionId == mcm.oid_Settings_AutoSellJunk)
+        mcm.SetInfoText("When Enabled, anything in your inventory that matches an item in the junk filter will automatically be sold when asking a managed merchant 'What have you got for sale?'. Not recommened for items you've added enchantments too or tempered as you'll only get the base value (pre enchantment/tempering). [Defualt off]")
     EndIf    
     
 EndFunction
 
 Function OnDefault(YoureHiredMCM mcm, int optionId) global
     If (optionId == mcm.oid_Settings_FenceEnabled)
-        mcm.S_FenceEnabled = false
-        mcm.FixedProperties.aaslrFenceWantedFlag.SetValue(0.0)
-        mcm.SetToggleOptionValue(mcm.oid_Settings_FenceEnabled, mcm.S_FenceEnabled)
-        Logger("Fence Enabled: " + mcm.FixedProperties.aaslrFenceWantedFlag.GetValue())
+        mcm.S_FenceDialogueEnabled = false
+        mcm.SetToggleOptionValue(mcm.oid_Settings_FenceEnabled, mcm.S_FenceDialogueEnabled)
     ElseIf (optionId == mcm.oid_Settings_RecruitmentEnabled)
         mcm.S_RecruitmentEnabled = false
-        mcm.FixedProperties.aaslrNowHiringFlagGlobal.SetValue(0.0)
         mcm.SetToggleOptionValue(mcm.oid_Settings_RecruitmentEnabled, mcm.S_RecruitmentEnabled)
-        Logger("Now Hiring!: " + mcm.FixedProperties.aaslrNowHiringFlagGlobal.GetValue())
-    ElseIf (optionId == mcm.oid_Settings_RepeatEnabled)
-        mcm.S_RepeatEnabled = false
-        mcm.FixedProperties.aaslrRepeatCustomerFlagGlobal.SetValueInt(0)
-        mcm.SetToggleOptionValue(mcm.oid_Settings_RepeatEnabled, mcm.S_RepeatEnabled)
-        Logger("Repeat Customer: " + mcm.FixedProperties.aaslrNowHiringFlagGlobal.GetValueInt())
+    ElseIf (optionId == mcm.oid_Settings_DoubleMerchantEnabled)
+        mcm.S_DoubleMerchantEnabled = false
+        mcm.SetToggleOptionValue(mcm.oid_Settings_DoubleMerchantEnabled, mcm.S_DoubleMerchantEnabled)
+        mcm.FixedProperties.SetUpdateVanillaMerchantFaction()
+        mcm.FixedProperties.MerchantManager.UpdateResetCondtions()
     ElseIf (optionId == mcm.oid_Settings_ResetVanillaEnabled)
         mcm.S_ResetVanillaEnabled = false
         mcm.FixedProperties.aaslrResetVanillaFlagGlobal.SetValue(0.0)
         mcm.SetToggleOptionValue(mcm.oid_Settings_ResetVanillaEnabled, mcm.S_ResetVanillaEnabled)
-        Logger("Reset Vanilla: " + mcm.FixedProperties.aaslrResetVanillaFlagGlobal.GetValue())
     ElseIf (optionId == mcm.oid_SettingS_AllowChildren)
         mcm.S_AllowChildren = false
         mcm.FixedProperties.aaslrAllowChildrenFlag.SetValue(2.0)
         mcm.SetToggleOptionValue(mcm.oid_SettingS_AllowChildren, mcm.S_AllowChildren)
-        Logger("AllowChildrenFlag:" + mcm.FixedProperties.aaslrAllowChildrenFlag.GetValue())
     ElseIf (optionId == mcm.oid_SettingS_AllowAnimals)
         mcm.S_AllowAnimals = false
         mcm.FixedProperties.aaslrallowBeastsFlag.SetValue(2.0)
         mcm.SetToggleOptionValue(mcm.oid_SettingS_AllowAnimals, mcm.S_AllowAnimals)
-        Logger("allowAnimalsFlag:" + mcm.FixedProperties.aaslrallowBeastsFlag.GetValue())
     ElseIf (optionId == mcm.oid_Settings_EnableHotKeyUse)
         mcm.S_EnableHotKeyUse = false
         mcm.SetToggleOptionValue(optionId, mcm.S_EnableHotKeyUse)
@@ -305,7 +291,6 @@ Function OnDefault(YoureHiredMCM mcm, int optionId) global
         mcm.S_ResetOnMenuClose = false
         mcm.FixedProperties.ResetOnMenuClose = false
         mcm.FixedProperties.SetToggleBetweenMenuOrGametimeReset()
-        ; mcm.FixedProperties.SetUpdateNeeded()
         mcm.FixedProperties.MerchantManager.UpdateResetCondtions()
         mcm.SetToggleOptionValue(optionId, mcm.S_ResetOnMenuClose)
     ElseIf (optionId == mcm.oid_Settings_LowCountReset)
@@ -322,20 +307,22 @@ Function OnDefault(YoureHiredMCM mcm, int optionId) global
         mcm.FixedProperties.SetDestroyOnRemoval(mcm.S_DestroyOnRemoval)
     ElseIF (optionId == mcm.oid_Settings_OverStockedMerchants)
         mcm.S_OverStockedEnabled = false
-        mcm.FixedProperties.OverStockedcMerchant = false
         mcm.SetToggleOptionValue(optionId, mcm.S_OverStockedEnabled)
         mcm.FixedProperties.SetNeedToUpdateMerchantChests()
         mcm.FixedProperties.MerchantManager.UpdateResetCondtions()
     ElseIf (optionId == mcm.oid_Settings_ExtraStartingGold)
         mcm.S_ExtraStartingGold = 0
-        mcm.FixedProperties.ExtraGoldAmount = 0
+        mcm.FixedProperties.MaxGoldValue = 1800.0 + mcm.S_ExtraStartingGold as float
         mcm.SetSliderOptionValue(optionId, mcm.S_ExtraStartingGold, "By {0}")
         mcm.FixedProperties.SetNeedToUpdateMerchantChests()
         mcm.FixedProperties.MerchantManager.UpdateResetCondtions()
-    ElseIf (optionId == mcm.oid_Settings_MaxGoldInChest)
-        mcm.S_MaxGoldInChest = 6800.0
-        mcm.FixedProperties.MaxGoldValue = mcm.S_MaxGoldInChest
-        mcm.SetSliderOptionValue(optionId, mcm.S_MaxGoldInChest, "When Above {0}")
+    ; ElseIf (optionId == mcm.oid_Settings_MaxGoldInChest)
+    ;     mcm.S_MaxGoldInChest = 6800.0
+    ;     mcm.FixedProperties.MaxGoldValue = mcm.S_MaxGoldInChest
+    ;     mcm.SetSliderOptionValue(optionId, mcm.S_MaxGoldInChest, "When Above {0}")
+    ElseIf (optionId == mcm.oid_Settings_AutoSellJunk)
+        mcm.S_AutoSellJunk = false
+        mcm.SetToggleOptionValue(optionId, mcm.S_AutoSellJunk)
     EndIf
 EndFunction ; OnDefault
 
@@ -345,15 +332,15 @@ Function OnSliderOpen(YoureHiredMCM mcm, int optionId) global
         mcm.SetSliderDialogDefaultValue(2.0)
         mcm.SetSliderDialogRange(1.0, 7.0)
         mcm.SetSliderDialogInterval(0.5)
-    elseif optionId == mcm.oid_Settings_MaxGoldInChest
-        mcm.SetSliderDialogStartValue(mcm.S_MaxGoldInChest)
-        mcm.SetSliderDialogDefaultValue(6800)
-        mcm.SetSliderDialogRange(mcm.S_MinGOldAmount,25000.0)
-        mcm.SetSliderDialogInterval(100.0)
+    ; elseif optionId == mcm.oid_Settings_MaxGoldInChest
+    ;     mcm.SetSliderDialogStartValue(mcm.S_MaxGoldInChest)
+    ;     mcm.SetSliderDialogDefaultValue(6800)
+    ;     mcm.SetSliderDialogRange(mcm.S_MinGOldAmount,25000.0)
+    ;     mcm.SetSliderDialogInterval(100.0)
     elseif optionId == mcm.oid_Settings_ExtraStartingGold
         mcm.SetSliderDialogStartValue(mcm.S_ExtraStartingGold)
         mcm.SetSliderDialogDefaultValue(0)
-        mcm.SetSliderDialogRange(0, 5000)
+        mcm.SetSliderDialogRange(0, mcm.BonusMerchantGoldGlobals.Length*1000)
         mcm.SetSliderDialogInterval(1000)
     endIf
 EndFunction
@@ -363,29 +350,17 @@ Function OnSliderAccept(YoureHiredMCM mcm, int optionId, float value) global
         mcm.S_NumDaysBetweenReset = value
         mcm.FixedProperties.DaysBeforeReset = mcm.S_NumDaysBetweenReset
         mcm.SetSliderOptionValue(optionId, mcm.S_NumDaysBetweenReset, "Every {1} Days")
-    elseif optionId == mcm.oid_Settings_MaxGoldInChest
-        mcm.S_MaxGoldInChest = value
-        mcm.FixedProperties.MaxGoldValue = value
-        mcm.SetSliderOptionValue(optionId, value, "When Above {0}")
+    ; elseif optionId == mcm.oid_Settings_MaxGoldInChest
+    ;     mcm.S_MaxGoldInChest = value
+    ;     mcm.FixedProperties.MaxGoldValue = value
+    ;     mcm.SetSliderOptionValue(optionId, value, "When Above {0}")
     elseif optionId == mcm.oid_Settings_ExtraStartingGold
         mcm.S_ExtraStartingGold = (value as int)
-        mcm.FixedProperties.ExtraGoldAmount = (value as int)
+        mcm.FixedProperties.MaxGoldValue = 1800.0 + mcm.S_ExtraStartingGold as float
         mcm.SetSliderOptionValue(optionId, value, "By {0}")
         mcm.FixedProperties.SetNeedToUpdateMerchantChests()
         mcm.FixedProperties.MerchantManager.UpdateResetCondtions()
     endIf
-EndFunction
-
-Function Logger(string textToLog = "", bool logFlag = true, int logType = 1) global
-    if logType == 1
-        YHUtil.Log("MCM SettingsPage - " + textToLog, logFlag)
-    endIf
-    If logType == 2
-        YHUtil.AddLineBreakWithText("MCM SettingsPage - " + textToLog, logFlag)
-    EndIf
-    If logType == 3
-        YHUtil.AddLineBreakGameTimeOptional(logFlag)
-    EndIf
 EndFunction
 
 Function ToggleHotKeyOptions(YoureHiredMCM mcm) global

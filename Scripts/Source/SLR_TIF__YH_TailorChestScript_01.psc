@@ -6,7 +6,7 @@ Scriptname SLR_TIF__YH_TailorChestScript_01 Extends TopicInfo Hidden
 Function Fragment_0(ObjectReference akSpeakerRef)
 Actor akSpeaker = akSpeakerRef as Actor
 ;BEGIN CODE
-YHMMScript.ChangeChestType(akSpeaker, "TailorJeweler")
+YHMMScript.ChangeChestType(akSpeaker, "Tailor")
 ;END CODE
 EndFunction
 ;END FRAGMENT
