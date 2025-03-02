@@ -1,0 +1,6 @@
+LOOT Masterlist Entries
+
+  - name: 'You''reHired!.esp'
+    clean:
+      - crc: 0xF163BBFF
+        util: 'SSEEdit v4.1.5f'
