@@ -58,7 +58,11 @@ bool property MM_LiveAtHome
             RugActivationScript rugScript = FixedProperties.GetRugActivatorAsScript(MM_ThisMerchant.GetMerchantIndex())
             if rugScript
                 _sleepAtHome = rugScript.IsSleepPackageEnabled()
+            else
+                _sleepAtHome = false
             endIf
+        else
+            _sleepAtHome = false
         endIf
         return _sleepAtHome
     EndFunction
@@ -86,7 +90,11 @@ bool property MM_WorkAtStall
             MerchantStallActivationScript stallScript = FixedProperties.GetStallActivatorAsScript(MM_ThisMerchant.GetMerchantIndex())
             if stallScript
                 _workAtStall = stallScript.IsMerchantStallPackageEnabled()
+            else
+                _workAtStall = false
             endIf
+        else
+            _workAtStall = false
         endIf
         return _workAtStall
     EndFunction
@@ -288,7 +296,6 @@ Event OnConfigInit()
     Pages[1] = YoureHiredMCM_MerchantManagementPage.GetPageName()
     Pages[2] = YoureHiredMCM_StoreManagerPage.GetPageName()
 EndEvent
-
 
 Event OnPageReset(string page)
     RenderHomePage()

@@ -143,7 +143,6 @@ Function AddStallActivatorToList(ObjectReference thisActivator, BusinessScript o
         EndIf
         StallActivatorsCurrent[index] = thisActivator
     else
-        Log(self + "No empty spaces found when trying to put stall activator into array.")
     endIf
 EndFunction
 
@@ -167,7 +166,6 @@ ObjectReference Function GetInventoryStand()
 EndFunction
 
 ObjectReference Function GetInvRugSleepMarker()
-    Log(self + " InvRugSleepMarker: " + InvRugSleepMarker)
     return InvRugSleepMarker.PlaceAtMe(InvRugSleepMarker.GetBaseObject(), 1, true, false)
 EndFunction
 

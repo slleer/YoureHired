@@ -39,9 +39,16 @@ Function RIGHT(YoureHiredMCM mcm) global
         flag = mcm.OPTION_FLAG_NONE
         If (mcm.FixedProperties.GetRugActivatorAsScript(mcm.MM_ThisMerchant.GetMerchantIndex()))
             liveFlag = mcm.OPTION_FLAG_NONE
+            Log("merchantmanager - none flag, merchant: " + mcm.MM_ThisMerchant.GetActorName())
+        Else
+            liveFlag = mcm.OPTION_FLAG_DISABLED
+            Log("merchantmanager - disabled flag, merchant: " + mcm.MM_ThisMerchant.GetActorName())
+            
         EndIf
         If (mcm.FixedProperties.GetStallActivatorAsScript(mcm.MM_ThisMerchant.GetMerchantIndex()))
             workFlag = mcm.OPTION_FLAG_NONE
+        Else
+            workFlag = mcm.OPTION_FLAG_DISABLED
         EndIf
     else
         flag = mcm.OPTION_FLAG_DISABLED
