@@ -7,11 +7,11 @@
     Optimize="false" 
     Release="false" 
     Zip="true"
-    Package="true"
+    Package="false"
     Final="false">
     <Variables>
         <!-- Set the name of your mod: -->
-        <Variable Name="ModName" Value="YoureHired" />
+        <Variable Name="ModName" Value="You'reHired" />
         <!-- The folder where you store all of your mods -->
         <Variable Name="ModsFolder" Value="E:\SkyrimModStuff\Mods\skyrimse"/>
         <!-- Optional folder with additional source code for imports -->
@@ -48,7 +48,13 @@
         <ZipFile Name="@ModName" RootDir="." Compression="deflate">
             <Include>You'reHired!.esp</Include>
             <Include NoRecurse="true">*.bsa</Include>
-            <!-- <Match In="Scripts\Source">*.psc</Match> -->
+            <Match In="Scripts">*.pex</Match>
+            <Match In="Sound">*.fuz</Match>
+            <Match In="DialogueViews">*.xml</Match>
+            <Match In="Seq">*.seq</Match>         
+            <Match In="Scripts\Source">*.psc</Match>
+            <Include>*.dds</Include>
+            <Include>*.nif</Include>
         </ZipFile>
     </ZipFiles>
     <!-- This will remove any *.bsa files in this directory *after* the build, if there are any. Set UseInBuild="false" to disable. -->
