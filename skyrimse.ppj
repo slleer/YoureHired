@@ -34,21 +34,23 @@
             <Match In="DialogueViews">*.xml</Match>
             <Match In="Seq">*.seq</Match>         
             <Match In="Scripts\Source">*.psc</Match>
-        </Package>
-        <!-- If you have any texture files, uncomment the following to create a Textures .bsa archive with texture files -->
-        <Package Name="You'reHired! - Textures" RootDir=".">
+            <Include>*.nif</Include>
             <Include>*.dds</Include>
         </Package>
-        <Package Name="You'reHired! - Meshes" RootDir=".">
+        <!-- If you have any texture files, uncomment the following to create a Textures .bsa archive with texture files -->
+        <!-- <Package Name="You'reHired! - Textures" RootDir=".">
+            <Include>*.dds</Include>
+        </Package> -->
+        <!-- <Package Name="You'reHired! - Meshes" RootDir=".">
             <Include>*.nif</Include>
-        </Package>
+        </Package> -->
     </Packages>
     <!-- The following section is for .zip archive. You can enable it by setting Zip="true" in the PapyrusProject -->
     <ZipFiles Output="Build">
         <ZipFile Name="You'reHired!" RootDir="." Compression="deflate">
             <Include>You'reHired!.esp</Include>
-            <!-- <Include NoRecurse="true">*.bsa</Include>
-            <Match In="Scripts">*.pex</Match>
+            <Include NoRecurse="true">*.bsa</Include>
+            <!-- <Match In="Scripts">*.pex</Match>
             <Match In="Sound">*.fuz</Match>
             <Match In="DialogueViews">*.xml</Match>
             <Match In="Seq">*.seq</Match>          -->
