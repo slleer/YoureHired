@@ -37,5 +37,6 @@ Function Maintenance()
     (YoureHiredQuest as MerchantStandPlacementThreadManager).ListenForModEvents()
     (YoureHiredQuest as YoureHiredMerchantPropertiesScript).SendListeningCommands()
     (YoureHiredQuest as YoureHiredVanillaManagerScript).ListenForModEvents()
+    (YoureHiredQuest as MerchantScript).LoadGameMaintenance()
     Log(self + " We are now listening for all the mod events.")
 EndFunction 

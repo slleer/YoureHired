@@ -86,6 +86,12 @@ Function ChangeChestType(string chestType)
     Log(self + "In the empty state")
 EndFunction
 
+Function LoadGameMaintenance()
+    YoureHiredFaction.SetMerchantContainer(MerchantChestScript)
+    ProxyActor.GetBaseObject().SetName(_actorName)       
+    ProxyActor.SetRace(GetActorReference().GetRace())
+EndFunction
+
 Function SetMerchantIndex(int index)
     merchantIndex = index
 EndFunction
@@ -226,10 +232,7 @@ bool Function FillAliasWithActor(Actor akMerchant)
             invRugSleepMarkerOwned.SetDisplayName(_actorName + "'s Home Warming Rug")
             (invRugSleepMarkerOwned as RugInvItemScript).SetOwningMerchant(self)
             ProxyActor.AddItem(invRugSleepMarkerOwned, 1, true)
-            ; If !invMerchantStandOwned
-            ; else
-            ;     invMerchantStandOwned.SetDisplayName(_actorName + "'s Merchant Stall")
-            ; EndIf
+
         EndIf
 
         if akMerchant.IsInFaction(FixedProperties.JobMerchantFaction)
@@ -354,6 +357,11 @@ EndFunction
 
 Function ClearInventoryRug()
     invRugSleepMarkerOwned = NONE
+EndFunction
+
+Function SetInventoryRug(ObjectReference newRug)
+    invRugSleepMarkerOwned = newRug
+    invRugSleepMarkerOwned.SetDisplayName(_actorName + "'s Home Warming Rug")
 EndFunction
 
 Function SetInventoryMerchantStall(ObjectReference newStall)

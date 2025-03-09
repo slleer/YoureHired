@@ -124,7 +124,7 @@ Function DestroyThisRug()
         If (newRugInvItem)
             (newRugInvItem as RugInvItemScript).SetOwningMerchant(owningMerchant)
             newRugInvItem.SetDisplayName(owningMerchant.GetActorName() + "'s Home Warming Rug")
-            owningMerchant.SetInventoryMerchantStall(newRugInvItem)
+            owningMerchant.SetInventoryRug(newRugInvItem)
             (YoureHired as YoureHiredMerchantPropertiesScript).PlayerRef.AddItem(newRugInvItem, 1, true)
         EndIf
     endIf

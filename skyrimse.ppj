@@ -47,7 +47,7 @@
     </Packages>
     <!-- The following section is for .zip archive. You can enable it by setting Zip="true" in the PapyrusProject -->
     <ZipFiles Output="Build">
-        <ZipFile Name="You'reHired!" RootDir="." Compression="deflate">
+        <ZipFile Name="YoureHired" RootDir="." Compression="deflate">
             <Include>You'reHired!.esp</Include>
             <Include NoRecurse="true">*.bsa</Include>
             <!-- <Match In="Scripts">*.pex</Match>

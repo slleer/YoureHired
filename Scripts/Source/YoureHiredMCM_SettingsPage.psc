@@ -46,7 +46,7 @@ Function LEFT(YoureHiredMCM mcm) global
     EndIf
     ; mcm.oid_Settings_VanillaHotkeyEnabled = mcm.AddToggleOption("Enable Vanilla Hotkey Reset", mcm.S_VanillaHotkeyEnabled, flag)
     mcm.oid_Settings_ResetHotkey = mcm.AddKeyMapOption("Reset Hotkey:", mcm.S_Hotkey, flag)
-    mcm.oid_Settings_RequireTwoKeys = mcm.AddToggleOption("Require Seconday Key", mcm.S_RequireTwoKeys, flag)
+    mcm.oid_Settings_RequireTwoKeys = mcm.AddToggleOption("Require Secondary Key", mcm.S_RequireTwoKeys, flag)
     mcm.oid_Settings_SecondaryResetHotkey = mcm.AddKeyMapOption("Secondary Hotkey:", mcm.S_SecondaryHotkey, secondFlag)
     
 EndFunction
@@ -67,6 +67,7 @@ Function RIGHT(YoureHiredMCM mcm) global
     mcm.oid_Settings_DoubleMerchantEnabled = mcm.AddToggleOption("Double Merchant", mcm.S_DoubleMerchantEnabled)
     mcm.oid_Settings_AutoSellJunk = mcm.AddToggleOption("Automatically Sell Junk", mcm.S_AutoSellJunk)
     ; mcm.oid_Settings_DestroyOnRemoval = mcm.AddToggleOption("Destroy On Dismiss", mcm.S_DestroyOnRemoval)
+    mcm.oid_Settings_ActivateJunkFilter = mcm.AddTextOption("Open Junk Filter", mcm.MM_ClickHereText)
 EndFunction
 
 Function OnSelect(YoureHiredMCM mcm, int optionId) global
@@ -151,6 +152,14 @@ Function OnSelect(YoureHiredMCM mcm, int optionId) global
     ElseIf (optionId == mcm.oid_Settings_AutoSellJunk)
         mcm.S_AutoSellJunk = !mcm.S_AutoSellJunk
         mcm.SetToggleOptionValue(optionId, mcm.S_AutoSellJunk)
+    ElseIf (optionId == mcm.oid_Settings_ActivateJunkFilter)
+        If (!mcm.S_ActivateEventSent)
+            int handle = ModEvent.Create("aaslrYH_AcitvateJunkFilter")
+            If (handle)
+                ModEvent.Send(handle)
+                mcm.S_ActivateEventSent = true
+            EndIf
+        EndIf
     EndIf    
 EndFunction ; OnSelect
 
@@ -191,7 +200,7 @@ Function OnHighlight(YoureHiredMCM mcm, int optionId) global
     ElseIf (optionId == mcm.oid_SettingS_AllowChildren)
         mcm.SetInfoText("Allows children to become merchants [Default off]")
     ElseIf (optionId == mcm.oid_SettingS_AllowAnimals)
-        mcm.SetInfoText("Allows certain animals to become merchants [Default off] - Supported animal types: dog, goat, horse, fox, mudcrab, skeever, frostbite spider, rabbit, death hound")
+        mcm.SetInfoText("Allows certain animals to become merchants [Default off] - Supported animal types: dog, goat, fox, mudcrab, skeever, frostbite spider, rabbit, death hound")
     ElseIf (optionId == mcm.oid_Settings_EnableHotKeyUse)
         mcm.SetInfoText("Use the registerd hotkey/s to reset a managed merchant's inventory while in the bartering menu. [Default off]")
     ElseIf (optionId == mcm.oid_Settings_RequireTwoKeys)
@@ -230,6 +239,8 @@ Function OnHighlight(YoureHiredMCM mcm, int optionId) global
     ;     mcm.SetInfoText("Any gold above this amount in a managed merchant's inventory will remain when reseting their inventory or changing merchant types. This also allows a merchant's gold to grow beyond 32000 without issue. [Default 6800]")
     ElseIf (optionId == mcm.oid_Settings_AutoSellJunk)
         mcm.SetInfoText("When Enabled, anything in your inventory that matches an item in the junk filter will automatically be sold when asking a managed merchant 'What have you got for sale?'. Not recommened for items you've added enchantments too or tempered as you'll only get the base value (pre enchantment/tempering). [Defualt off]")
+    ElseIf (optionId == mcm.oid_Settings_ActivateJunkFilter)
+        mcm.SetInfoText("Will open the Junk Filter once the MCM has been closed.")
     EndIf    
     
 EndFunction

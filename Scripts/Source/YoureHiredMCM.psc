@@ -138,6 +138,7 @@ bool property S_LowCountReset auto
 bool property S_ShowDropMessage auto
 bool property S_DestroyOnRemoval auto
 bool property S_AutoSellJunk auto
+bool property S_ActivateEventSent auto
 ; bool property S_VanillaHotkeyEnabled auto
 float property S_NumDaysBetweenReset auto
 float property S_MaxGoldInChest auto
@@ -251,9 +252,10 @@ int property oid_Settings_DestroyOnRemoval auto
 int property oid_Settings_OverStockedMerchants auto
 int property oid_Settings_ExtraStartingGold auto
 int property oid_Settings_MaxGoldInChest auto
+int property oid_Settings_ActivateJunkFilter auto
 
 int function GetVersion()
-    return 1
+    return 2
 endFunction
 
 Event OnConfigInit()
@@ -274,6 +276,7 @@ Event OnConfigInit()
     S_DestroyOnRemoval = FixedProperties.IsDestroyOnRemoval()
     S_ExtraStartingGold = 0
     S_OverStockedEnabled = false
+    S_ActivateEventSent = false
     If (Game.UsingGamepad())
         S_Hotkey = 281 ; R-Trigger
         S_SecondaryHotkey = 280 ; L-Trigger
@@ -315,6 +318,12 @@ Event OnPageReset(string page)
     elseif page == YoureHiredMCM_StoreManagerPage.GetPageName()
         YoureHiredMCM_StoreManagerPage.RenderPage(self, page)
     endIf
+EndEvent
+
+Event OnVersionUpdate(int a_version)
+    If (a_version >= 2 && CurrentVersion < 2)
+        S_ActivateEventSent = false
+    EndIf
 EndEvent
 
 Function RenderHomePage()

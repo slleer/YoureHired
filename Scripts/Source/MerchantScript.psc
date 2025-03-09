@@ -5,7 +5,7 @@ Import YHUtil
 
 YoureHiredMerchantPropertiesScript property FixedProperties auto
 PlayerRefScript property PlayerScript auto
-
+ObjectReference property JunkFilterChest auto
 ; FormList property Merchants auto
 
 
@@ -34,9 +34,16 @@ Event OnInit()
         index += 1
     EndWhile
     NextOpenAlias = 0
+    RegisterForModEvent("aaslrYH_AcitvateJunkFilter", "OnActivateJunkFilterRequest")
     ; RegisterForMenu("Journal Menu")
 EndEvent
 
+Event OnActivateJunkFilterRequest()
+    Utility.Wait(0.1)
+    Log(self + " We are in the junkfilterrequest event")
+    (myQuest as YoureHiredMCM).S_ActivateEventSent = false
+    ActivateJunkFilter()
+EndEvent
 
 Event OnUpdate()
     Log(self + " We are in the update event!!!")
@@ -344,4 +351,19 @@ Function ResetChest(Actor akMerchant)
         merchantToReset.MerchantChestScript.ResetChest(false)
     endIf
 
+EndFunction
+
+Function LoadGameMaintenance()
+    RegisterForModEvent("aaslrYH_AcitvateJunkFilter", "OnActivateJunkFilterRequest")
+    int index = FixedProperties.aaslrMaxNumberMerchants.GetValueInt()
+    while index
+        index -= 1
+        If hiredActors[index]
+            merchantAliases[index].LoadGameMaintenance()
+        EndIf
+    endWhile
+EndFunction
+
+Function ActivateJunkFilter()
+    JunkFilterChest.Activate(PlayerScript.GetActorReference())
 EndFunction

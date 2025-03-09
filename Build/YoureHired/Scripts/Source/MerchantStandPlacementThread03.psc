@@ -1,0 +1,1 @@
+Scriptname MerchantStandPlacementThread03 extends MerchantStandPlacementThread  
